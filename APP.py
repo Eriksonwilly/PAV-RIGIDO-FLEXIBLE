@@ -1,7 +1,46 @@
 import streamlit as st
 import numpy as np
 
-# Configuración de la página
+# --- Autenticación simple ---
+def check_credentials(username, password):
+    valid_users = {
+        "admin": "admin123",
+        "demo": "demo"
+    }
+    return username in valid_users and password == valid_users[username]
+
+if 'logged_in' not in st.session_state:
+    st.session_state['logged_in'] = False
+
+if not st.session_state['logged_in']:
+    st.set_page_config(
+        page_title="CONSORCIO DEJ - Pavimento Rígido/Flexible",
+        page_icon="🛣️",
+        layout="wide"
+    )
+    st.markdown("""
+    <div style="text-align: center; padding: 30px; background-color: #FFD700; color: #2F2F2F; border-radius: 10px; margin-bottom: 20px; border: 2px solid #FFA500;">
+        <h1>🛣️ CONSORCIO DEJ</h1>
+        <p style="font-size: 18px; font-weight: bold;">Sistema de Diseño de Pavimentos</p>
+        <p style="font-size: 14px;">Ingrese sus credenciales para acceder</p>
+    </div>
+    """, unsafe_allow_html=True)
+    st.info("Ingrese usuario y contraseña para acceder al sistema.\n\n**admin / admin123** o **demo / demo**")
+    with st.form("login_form"):
+        username = st.text_input("Usuario")
+        password = st.text_input("Contraseña", type="password")
+        submitted = st.form_submit_button("Entrar")
+        if submitted:
+            if check_credentials(username, password):
+                st.session_state['logged_in'] = True
+                st.session_state['user'] = username
+                st.success(f"¡Bienvenido, {username}!")
+                st.experimental_rerun()
+            else:
+                st.error("Usuario o contraseña incorrectos.")
+    st.stop()
+
+# --- App principal (solo si autenticado) ---
 st.set_page_config(
     page_title="CONSORCIO DEJ - Pavimento Rígido/Flexible",
     page_icon="🛣️",
@@ -9,15 +48,14 @@ st.set_page_config(
 )
 
 # Banner superior con fondo y estilo profesional
-st.markdown("""
+st.markdown(f"""
 <div style="text-align: center; padding: 20px; background-color: #FFD700; color: #2F2F2F; border-radius: 10px; margin-bottom: 20px; border: 2px solid #FFA500;">
     <h1>🛣️ CONSORCIO DEJ</h1>
     <p style="font-size: 18px; font-weight: bold;">Diseño de Pavimentos Rígido y Flexible</p>
-    <p style="font-size: 14px;">Normativa Peruana MTC 2020 / 2018 | Inspirado en PCAcalculo</p>
+    <p style="font-size: 14px;">Usuario: <b>{st.session_state['user']}</b></p>
 </div>
 """, unsafe_allow_html=True)
 
-# Mensaje de bienvenida y ayuda
 st.info("""
 Bienvenido al sistema profesional de diseño de pavimentos. Complete los datos del proyecto y presione **Calcular** para obtener resultados y recomendaciones según normativa peruana. 
 

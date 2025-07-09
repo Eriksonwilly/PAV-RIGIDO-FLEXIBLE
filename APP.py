@@ -11,8 +11,11 @@ def check_credentials(username, password):
 
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
+if 'user' not in st.session_state:
+    st.session_state['user'] = None
 
-if not st.session_state['logged_in']:
+# --- PORTADA DE LOGIN ---
+def show_login_page():
     st.set_page_config(
         page_title="CONSORCIO DEJ - Pavimento Rígido/Flexible",
         page_icon="🛣️",
@@ -27,8 +30,8 @@ if not st.session_state['logged_in']:
     """, unsafe_allow_html=True)
     st.info("Ingrese usuario y contraseña para acceder al sistema.\n\n**admin / admin123** o **demo / demo**")
     with st.form("login_form"):
-        username = st.text_input("Usuario")
-        password = st.text_input("Contraseña", type="password")
+        username = st.text_input("Usuario", key="login_user")
+        password = st.text_input("Contraseña", type="password", key="login_pass")
         submitted = st.form_submit_button("Entrar")
         if submitted:
             if check_credentials(username, password):
@@ -40,6 +43,9 @@ if not st.session_state['logged_in']:
                 st.error("Usuario o contraseña incorrectos.")
     st.stop()
 
+if not st.session_state['logged_in']:
+    show_login_page()
+
 # --- App principal (solo si autenticado) ---
 st.set_page_config(
     page_title="CONSORCIO DEJ - Pavimento Rígido/Flexible",
@@ -47,14 +53,20 @@ st.set_page_config(
     layout="wide"
 )
 
-# Banner superior con fondo y estilo profesional
-st.markdown(f"""
-<div style="text-align: center; padding: 20px; background-color: #FFD700; color: #2F2F2F; border-radius: 10px; margin-bottom: 20px; border: 2px solid #FFA500;">
-    <h1>🛣️ CONSORCIO DEJ</h1>
-    <p style="font-size: 18px; font-weight: bold;">Diseño de Pavimentos Rígido y Flexible</p>
-    <p style="font-size: 14px;">Usuario: <b>{st.session_state['user']}</b></p>
-</div>
-""", unsafe_allow_html=True)
+# --- Barra superior con botón de cerrar sesión ---
+with st.container():
+    col_logo, col_title, col_user, col_logout = st.columns([0.12, 0.55, 0.18, 0.15])
+    with col_logo:
+        st.markdown("<div style='text-align:center;'><span style='font-size:38px;'>🛣️</span></div>", unsafe_allow_html=True)
+    with col_title:
+        st.markdown("<div style='text-align:center;'><h2 style='color:#2F2F2F;margin-bottom:0;'>CONSORCIO DEJ</h2><span style='font-size:16px;color:#555;'>Diseño de Pavimentos Rígido y Flexible</span></div>", unsafe_allow_html=True)
+    with col_user:
+        st.markdown(f"<div style='text-align:right;'><b>Usuario:</b> <span style='color:#1976D2'>{st.session_state['user']}</span></div>", unsafe_allow_html=True)
+    with col_logout:
+        if st.button("Cerrar Sesión", key="logout_btn"):
+            st.session_state['logged_in'] = False
+            st.session_state['user'] = None
+            st.experimental_rerun()
 
 st.info("""
 Bienvenido al sistema profesional de diseño de pavimentos. Complete los datos del proyecto y presione **Calcular** para obtener resultados y recomendaciones según normativa peruana. 

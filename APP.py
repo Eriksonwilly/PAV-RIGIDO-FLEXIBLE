@@ -122,41 +122,123 @@ with col_centro:
     tabla = st.data_editor(tabla_default, num_rows="dynamic", use_container_width=True)
     st.divider()
 
-# -------- PANEL DERECHO: ANÁLISIS Y RESULTADOS --------
+# --- FUNCIONES DE CÁLCULO ---
+def calcular_espesor_losa_rigido(W18, k, R, C, Sc, J, Ec):
+    # D = sqrt( (W18 * k * (1-R)) / (C * (Sc * J * (Ec/k)**0.25)) )
+    try:
+        numerador = W18 * k * (1 - R)
+        denominador = C * (Sc * J * (Ec / k) ** 0.25)
+        D = (numerador / denominador) ** 0.5
+        return D
+    except Exception:
+        return 0
+
+def calcular_junta_L(sigma_t, gamma_c, f, mu, w):
+    # L <= (f * mu * w) / (2 * sigma_t * gamma_c)
+    try:
+        L = (f * mu * w) / (2 * sigma_t * gamma_c)
+        return L
+    except Exception:
+        return 0
+
+def calcular_As_temp(gamma_c, L, h, fa, fs):
+    # As = (gamma_c * L * h * fa) / (2 * fs)
+    try:
+        As = (gamma_c * L * h * fa) / (2 * fs)
+        return As
+    except Exception:
+        return 0
+
+def calcular_SN_flexible(a1, D1, a2, D2, m2, a3, D3, m3):
+    # SN = a1*D1 + a2*D2*m2 + a3*D3*m3
+    try:
+        SN = a1 * D1 + a2 * D2 * m2 + a3 * D3 * m3
+        return SN
+    except Exception:
+        return 0
+
+# --- Panel derecho: lógica de cálculo y visualización ---
 with col_der:
     st.markdown("#### <span style='color:#D32F2F'>Análisis</span>", unsafe_allow_html=True)
     st.markdown("<div style='text-align:center'>", unsafe_allow_html=True)
-    st.button("🚀 Calcular", use_container_width=True)
+    calcular = st.button("🚀 Calcular", use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
     st.divider()
-    st.markdown("**Espesor de losa :**  ", help="mm/in")
-    st.markdown("**Módulo de rotura :**  ", help="psi/MPa")
-    st.markdown("**K del conjunto :**  ", help="pci/MPa/m")
-    st.markdown("**Período de diseño :**  ", help="años")
-    st.markdown("<span style='color:red'><b>Porcentaje de fatiga</b></span>: 0.00", unsafe_allow_html=True)
-    st.markdown("<span style='color:red'><b>Porcentaje de erosión</b></span>: 0.00", unsafe_allow_html=True)
-    st.divider()
-    st.markdown("**Recomendación para barras de anclaje:**")
-    st.markdown("Longitud:  ")
-    st.markdown("Separación entre barras:  ")
-    st.markdown("**Recomendación para pasadores (fy=60 ksi):**")
-    st.markdown("Longitud:  ")
-    st.markdown("Separación entre barras:  ")
-    st.markdown("Diámetro de barras:  ")
-    st.divider()
-    st.button("📊 Análisis de sensibilidad", use_container_width=True)
-    st.divider()
-    col_btn1, col_btn2, col_btn3, col_btn4 = st.columns(4)
-    with col_btn1:
-        st.button("💾 Guardar")
-    with col_btn2:
-        st.button("📂 Abrir")
-    with col_btn3:
-        st.button("📝 TXT")
-    with col_btn4:
-        st.button("❌ Salir")
-    st.divider()
-    st.markdown("Sistema de unidades :   ", help="SI / Inglés")
-    st.radio("", ["SI", "Inglés"], horizontal=True, index=0)
-    st.divider()
-    st.success("Resultados y gráficos aparecerán aquí tras el cálculo.")
+
+    # --- CÁLCULO PAVIMENTO RÍGIDO ---
+    if calcular:
+        # Parámetros de entrada (puedes ajustar nombres según tus campos)
+        # Ejemplo: W18, k, R, C, Sc, J, Ec
+        W18 = sum(tabla['Repeticiones']) if 'Repeticiones' in tabla else 100000
+        k = k_val if subrasante_tipo == "Ingreso directo" else 99
+        R = 0.95  # Confiabilidad (puedes agregar campo)
+        C = 1.0   # Coef. drenaje (puedes agregar campo)
+        Sc = modulo_rotura  # Resistencia a flexión
+        J = 3.2   # Coef. transferencia (puedes agregar campo)
+        Ec = 300000  # Módulo elasticidad (puedes agregar campo)
+        D = calcular_espesor_losa_rigido(W18, k, R, C, Sc, J, Ec)
+
+        # Juntas (ejemplo)
+        sigma_t = 45  # esfuerzo admisible (puedes agregar campo)
+        gamma_c = 2400  # peso unitario (puedes agregar campo)
+        f = 1.5  # coef. fricción
+        mu = 1.0  # coef. fricción
+        w = D * 1.0  # peso de losa (simplificado)
+        L_junta = calcular_junta_L(sigma_t, gamma_c, f, mu, w)
+
+        # Refuerzo por temperatura (si aplica)
+        fa = 1.5
+        fs = acero_fy
+        As_temp = calcular_As_temp(gamma_c, L_junta, D, fa, fs)
+
+        # Mostrar resultados
+        st.markdown(f"**Espesor de losa calculado (D):** <span style='color:#1976D2;font-size:20px'><b>{D:.2f} cm</b></span>", unsafe_allow_html=True)
+        st.markdown(f"**Junta máxima (L):** <span style='color:#1976D2'>{L_junta:.2f} m</span>", unsafe_allow_html=True)
+        st.markdown(f"**Área de acero por temperatura (As):** <span style='color:#1976D2'>{As_temp:.2f} cm²</span>", unsafe_allow_html=True)
+        st.markdown(f"**Número de ejes equivalentes (W18):** {W18}")
+        st.markdown(f"**Módulo de reacción (k):** {k}")
+        st.markdown(f"**Resistencia a flexión (Sc):** {Sc}")
+        st.markdown(f"**Módulo elasticidad (Ec):** {Ec}")
+        st.markdown(f"**Coef. transferencia (J):** {J}")
+        st.markdown(f"**Coef. drenaje (C):** {C}")
+        st.markdown(f"**Confiabilidad (R):** {R}")
+        st.divider()
+
+        # --- CÁLCULO PAVIMENTO FLEXIBLE (opcional, si tienes panel) ---
+        # Ejemplo de campos para flexible:
+        # a1, D1, a2, D2, m2, a3, D3, m3 = ...
+        # SN = calcular_SN_flexible(a1, D1, a2, D2, m2, a3, D3, m3)
+        # st.markdown(f"**Número estructural (SN):** <span style='color:#388E3C'>{SN:.2f}</span>", unsafe_allow_html=True)
+
+    else:
+        st.markdown("**Espesor de losa :**  ", help="mm/in")
+        st.markdown("**Módulo de rotura :**  ", help="psi/MPa")
+        st.markdown("**K del conjunto :**  ", help="pci/MPa/m")
+        st.markdown("**Período de diseño :**  ", help="años")
+        st.markdown("<span style='color:red'><b>Porcentaje de fatiga</b></span>: 0.00", unsafe_allow_html=True)
+        st.markdown("<span style='color:red'><b>Porcentaje de erosión</b></span>: 0.00", unsafe_allow_html=True)
+        st.divider()
+        st.markdown("**Recomendación para barras de anclaje:**")
+        st.markdown("Longitud:  ")
+        st.markdown("Separación entre barras:  ")
+        st.markdown("**Recomendación para pasadores (fy=60 ksi):**")
+        st.markdown("Longitud:  ")
+        st.markdown("Separación entre barras:  ")
+        st.markdown("Diámetro de barras:  ")
+        st.divider()
+        st.button("📊 Análisis de sensibilidad", use_container_width=True)
+        st.divider()
+        col_btn1, col_btn2, col_btn3, col_btn4 = st.columns(4)
+        with col_btn1:
+            st.button("💾 Guardar")
+        with col_btn2:
+            st.button("📂 Abrir")
+        with col_btn3:
+            st.button("📝 TXT")
+        with col_btn4:
+            st.button("❌ Salir")
+        st.divider()
+        st.markdown("Sistema de unidades :   ", help="SI / Inglés")
+        st.radio("", ["SI", "Inglés"], horizontal=True, index=0)
+        st.divider()
+        st.success("Resultados y gráficos aparecerán aquí tras el cálculo.")

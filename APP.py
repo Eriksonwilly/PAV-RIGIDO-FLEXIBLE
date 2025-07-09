@@ -38,6 +38,7 @@ def show_login_page():
                 st.session_state['logged_in'] = True
                 st.session_state['user'] = username
                 st.experimental_rerun()
+                st.stop()  # <-- Esto es clave para cortar el flujo tras el rerun
             else:
                 st.error("Usuario o contraseña incorrectos.")
     st.stop()

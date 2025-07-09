@@ -1,5 +1,9 @@
 import streamlit as st
 import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+from io import BytesIO
+import base64
 
 # --- Autenticación simple ---
 def check_credentials(username, password):
@@ -209,6 +213,174 @@ with col_der:
         # a1, D1, a2, D2, m2, a3, D3, m3 = ...
         # SN = calcular_SN_flexible(a1, D1, a2, D2, m2, a3, D3, m3)
         # st.markdown(f"**Número estructural (SN):** <span style='color:#388E3C'>{SN:.2f}</span>", unsafe_allow_html=True)
+
+    # --- ANÁLISIS DE SENSIBILIDAD Y GRÁFICOS ---
+    sensibilidad = st.button("📊 Análisis de sensibilidad", use_container_width=True)
+    if sensibilidad:
+        # Parámetros base
+        W18 = sum(tabla['Repeticiones']) if 'Repeticiones' in tabla else 100000
+        k = k_val if subrasante_tipo == "Ingreso directo" else 99
+        R = 0.95
+        C = 1.0
+        Sc = modulo_rotura
+        J = 3.2
+        Ec = 300000
+        
+        # Rangos más amplios y realistas
+        k_range = np.linspace(30, 500, 50)  # pci
+        Sc_range = np.linspace(200, 800, 50)  # psi
+        Ec_range = np.linspace(200000, 500000, 50)  # psi
+        W18_range = np.linspace(50000, 500000, 50)
+        R_range = np.linspace(0.80, 0.99, 50)
+        
+        # Cálculos de sensibilidad
+        D_k = [calcular_espesor_losa_rigido(W18, kx, R, C, Sc, J, Ec) for kx in k_range]
+        D_Sc = [calcular_espesor_losa_rigido(W18, k, R, C, scx, J, Ec) for scx in Sc_range]
+        D_Ec = [calcular_espesor_losa_rigido(W18, k, R, C, Sc, J, ecx) for ecx in Ec_range]
+        D_W18 = [calcular_espesor_losa_rigido(w18x, k, R, C, Sc, J, Ec) for w18x in W18_range]
+        D_R = [calcular_espesor_losa_rigido(W18, k, rx, C, Sc, J, Ec) for rx in R_range]
+        
+        # Gráfico combinado
+        fig_combined, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
+        
+        # D vs k
+        ax1.plot(k_range, D_k, color='blue', linewidth=2)
+        ax1.axvline(x=k, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {k}')
+        ax1.set_title('Espesor de losa vs Módulo de reacción (k)', fontsize=12, fontweight='bold')
+        ax1.set_xlabel('Módulo de reacción k (pci)')
+        ax1.set_ylabel('Espesor de losa D (pulg)')
+        ax1.grid(True, alpha=0.3)
+        ax1.legend()
+        
+        # D vs Sc
+        ax2.plot(Sc_range, D_Sc, color='green', linewidth=2)
+        ax2.axvline(x=Sc, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {Sc}')
+        ax2.set_title('Espesor de losa vs Módulo de rotura (Sc)', fontsize=12, fontweight='bold')
+        ax2.set_xlabel('Módulo de rotura Sc (psi)')
+        ax2.set_ylabel('Espesor de losa D (pulg)')
+        ax2.grid(True, alpha=0.3)
+        ax2.legend()
+        
+        # D vs W18
+        ax3.plot(W18_range, D_W18, color='orange', linewidth=2)
+        ax3.axvline(x=W18, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {W18:,.0f}')
+        ax3.set_title('Espesor de losa vs Tránsito (W18)', fontsize=12, fontweight='bold')
+        ax3.set_xlabel('Número de ejes equivalentes W18')
+        ax3.set_ylabel('Espesor de losa D (pulg)')
+        ax3.grid(True, alpha=0.3)
+        ax3.legend()
+        
+        # D vs R
+        ax4.plot(R_range, D_R, color='purple', linewidth=2)
+        ax4.axvline(x=R, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {R}')
+        ax4.set_title('Espesor de losa vs Confiabilidad (R)', fontsize=12, fontweight='bold')
+        ax4.set_xlabel('Confiabilidad R')
+        ax4.set_ylabel('Espesor de losa D (pulg)')
+        ax4.grid(True, alpha=0.3)
+        ax4.legend()
+        
+        plt.tight_layout()
+        st.pyplot(fig_combined)
+        
+        # Tabla de resultados y recomendaciones
+        st.markdown("### 📋 Resultados del Análisis de Sensibilidad")
+        
+        # Análisis de fatiga y erosión (simplificado)
+        D_actual = calcular_espesor_losa_rigido(W18, k, R, C, Sc, J, Ec)
+        fatiga_actual = (W18 / (10**7)) * (D_actual / Sc) ** 3.42  # Simplificado
+        erosion_actual = (W18 / (10**6)) * (D_actual / k) ** 7.35  # Simplificado
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Espesor Actual", f"{D_actual:.2f} pulg")
+        with col2:
+            st.metric("Fatiga (%)", f"{fatiga_actual*100:.2f}%")
+        with col3:
+            st.metric("Erosión (%)", f"{erosion_actual*100:.2f}%")
+        
+        # Recomendaciones automáticas
+        st.markdown("### 💡 Recomendaciones Automáticas")
+        
+        if fatiga_actual > 1.0:
+            st.warning("⚠️ **Fatiga crítica detectada.** Considere aumentar el espesor de losa o mejorar la resistencia del concreto.")
+        elif fatiga_actual > 0.5:
+            st.info("ℹ️ **Fatiga moderada.** El diseño está en el límite aceptable.")
+        else:
+            st.success("✅ **Fatiga dentro de límites seguros.**")
+            
+        if erosion_actual > 1.0:
+            st.warning("⚠️ **Erosión crítica detectada.** Considere mejorar la subrasante o aumentar el espesor de subbase.")
+        elif erosion_actual > 0.5:
+            st.info("ℹ️ **Erosión moderada.** Verificar drenaje y calidad de subrasante.")
+        else:
+            st.success("✅ **Erosión dentro de límites seguros.**")
+        
+        # Análisis de sensibilidad numérico
+        st.markdown("### 📊 Análisis de Sensibilidad Numérico")
+        
+        # Calcular sensibilidad (% cambio en D por % cambio en parámetro)
+        sens_k = abs((D_k[25] - D_k[24]) / D_k[24]) / abs((k_range[25] - k_range[24]) / k_range[24])
+        sens_Sc = abs((D_Sc[25] - D_Sc[24]) / D_Sc[24]) / abs((Sc_range[25] - Sc_range[24]) / Sc_range[24])
+        sens_W18 = abs((D_W18[25] - D_W18[24]) / D_W18[24]) / abs((W18_range[25] - W18_range[24]) / W18_range[24])
+        
+        sensibilidad_df = pd.DataFrame({
+            'Parámetro': ['Módulo de reacción (k)', 'Módulo de rotura (Sc)', 'Tránsito (W18)'],
+            'Sensibilidad': [sens_k, sens_Sc, sens_W18],
+            'Impacto': ['Alto' if s > 0.5 else 'Medio' if s > 0.2 else 'Bajo' for s in [sens_k, sens_Sc, sens_W18]]
+        })
+        
+        st.dataframe(sensibilidad_df, use_container_width=True)
+        
+        # Exportación
+        st.markdown("### 📤 Exportar Resultados")
+        
+        col_exp1, col_exp2 = st.columns(2)
+        
+        with col_exp1:
+            # Exportar a Excel
+            if st.button("📊 Exportar a Excel"):
+                # Crear DataFrame con todos los datos
+                excel_data = pd.DataFrame({
+                    'k (pci)': k_range,
+                    'D vs k (pulg)': D_k,
+                    'Sc (psi)': Sc_range,
+                    'D vs Sc (pulg)': D_Sc,
+                    'W18': W18_range,
+                    'D vs W18 (pulg)': D_W18,
+                    'R': R_range,
+                    'D vs R (pulg)': D_R
+                })
+                
+                # Guardar en buffer
+                buffer = BytesIO()
+                with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                    excel_data.to_excel(writer, sheet_name='Sensibilidad', index=False)
+                    sensibilidad_df.to_excel(writer, sheet_name='Recomendaciones', index=False)
+                
+                buffer.seek(0)
+                st.download_button(
+                    label="📥 Descargar Excel",
+                    data=buffer.getvalue(),
+                    file_name=f"analisis_sensibilidad_{proyecto}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+        
+        with col_exp2:
+            # Exportar gráfico a PDF
+            if st.button("📄 Exportar Gráfico a PDF"):
+                # Guardar figura en buffer
+                pdf_buffer = BytesIO()
+                fig_combined.savefig(pdf_buffer, format='pdf', bbox_inches='tight', dpi=300)
+                pdf_buffer.seek(0)
+                
+                st.download_button(
+                    label="📥 Descargar PDF",
+                    data=pdf_buffer.getvalue(),
+                    file_name=f"graficos_sensibilidad_{proyecto}.pdf",
+                    mime="application/pdf"
+                )
+        
+        st.success("✅ Análisis de sensibilidad completado con gráficos, recomendaciones y opciones de exportación.")
 
     else:
         st.markdown("**Espesor de losa :**  ", help="mm/in")

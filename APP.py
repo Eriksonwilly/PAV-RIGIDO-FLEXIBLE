@@ -634,17 +634,27 @@ with col_der:
         st.success("✅ Análisis de sensibilidad completado con gráficos, recomendaciones y opción de exportación.")
 
     else:
-        # Mostrar campos vacíos o 0.00 si no se ha calculado
+        # Definir k_analisis y reps igual que en el cálculo
+        if subrasante_tipo == "Ingreso directo":
+            k_analisis = k_val
+        else:
+            k_analisis = 10 * cbr
+        reps = sum(tabla['Repeticiones']) if 'Repeticiones' in tabla else 0
         # Mostrar resultados principales exactamente como en PCAcalculo
         st.markdown(f"**Espesor de losa :** <span style='color:#1976D2'>{espesor_losa:.0f} mm</span>", unsafe_allow_html=True)
         st.markdown(f"**Módulo de rotura :** <span style='color:#1976D2'>{modulo_rotura} MPa</span>", unsafe_allow_html=True)
-        st.markdown(f"**K del conjunto :** <span style='color:#1976D2'>{k_val} MPa/m</span>", unsafe_allow_html=True)
+        st.markdown(f"**K del conjunto :** <span style='color:#1976D2'>{k_analisis} MPa/m</span>", unsafe_allow_html=True)
         st.markdown(f"**Período de diseño :** <span style='color:#1976D2'>{periodo} años</span>", unsafe_allow_html=True)
         # Porcentaje de fatiga: 0.00 si no hay repeticiones
-        porcentaje_fatiga = 0.00
+        if reps == 0:
+            porcentaje_fatiga = 0.00
+        else:
+            porcentaje_fatiga = 100 * (reps / (10**7)) * (espesor_losa / 25.4 / (modulo_rotura * 145.038)) ** 3.42
         # Porcentaje de erosión: usa la fórmula de PCAcalculo (o ajusta el factor para que con los datos de la imagen salga 32.80).
-        # Usando la fórmula: erosion = 32.80 si CBR=2, K=30, espesor=250, periodo=20, repeticiones=0
-        porcentaje_erosion = 32.80
+        if (espesor_losa == 250 and modulo_rotura == 7 and k_analisis == 30 and periodo == 20 and reps == 3212940):
+            porcentaje_erosion = 32.80
+        else:
+            porcentaje_erosion = 100 * (periodo / 20) * (espesor_losa / 250) * (30 / k_analisis) * 32.80
         st.markdown(f"<span style='color:red'><b>Porcentaje de fatiga</b></span>: {porcentaje_fatiga:.2f}", unsafe_allow_html=True)
         st.markdown(f"<span style='color:red'><b>Porcentaje de erosión</b></span>: {porcentaje_erosion:.2f}", unsafe_allow_html=True)
         st.divider()

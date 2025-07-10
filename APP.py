@@ -705,36 +705,47 @@ with col_der:
     # --- ANÁLISIS DE SENSIBILIDAD Y GRÁFICOS ---
     sensibilidad = st.button("📊 Análisis de sensibilidad", use_container_width=True, key="btn_sensibilidad")
     if sensibilidad:
-        # Parámetros base
-        W18 = sum(tabla['Repeticiones']) if 'Repeticiones' in tabla else 100000
-        # Asegura que k_val esté definido correctamente
-        if subrasante_tipo == "Ingreso directo":
-            k_analisis = k_val
-        else:
-            # Si es correlación con CBR, usa una correlación típica: k = 10 * CBR (ajusta según normativa si tienes otra fórmula)
-            k_analisis = 10 * cbr
-        R = 0.95
-        C = 1.0
-        Sc = modulo_rotura
-        J = 3.2
-        Ec = 300000
+        # Verificar si matplotlib está disponible
+        if not MATPLOTLIB_AVAILABLE:
+            st.error("⚠️ Matplotlib no está disponible. No se puede generar el análisis de sensibilidad.")
+            return
         
-        # Rangos más amplios y realistas
-        k_range = np.linspace(30, 500, 50)  # pci
-        Sc_range = np.linspace(200, 800, 50)  # psi
-        Ec_range = np.linspace(200000, 500000, 50)  # psi
-        W18_range = np.linspace(50000, 500000, 50)
-        R_range = np.linspace(0.80, 0.99, 50)
-        
-        # Cálculos de sensibilidad
-        D_k = [calcular_espesor_losa_rigido(W18, kx, R, C, Sc, J, Ec, sistema_unidades) for kx in k_range]
-        D_Sc = [calcular_espesor_losa_rigido(W18, k_analisis, R, C, scx, J, Ec, sistema_unidades) for scx in Sc_range]
-        D_Ec = [calcular_espesor_losa_rigido(W18, k_analisis, R, C, Sc, J, ecx, sistema_unidades) for ecx in Ec_range]
-        D_W18 = [calcular_espesor_losa_rigido(w18x, k_analisis, R, C, Sc, J, Ec, sistema_unidades) for w18x in W18_range]
-        D_R = [calcular_espesor_losa_rigido(W18, k_analisis, rx, C, Sc, J, Ec, sistema_unidades) for rx in R_range]
-        
-        # Gráfico combinado
-        fig_combined, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
+        try:
+            import matplotlib
+            matplotlib.use('Agg')  # Backend no interactivo para Streamlit
+            import matplotlib.pyplot as plt
+            import numpy as np
+            
+            # Parámetros base
+            W18 = sum(tabla['Repeticiones']) if 'Repeticiones' in tabla else 100000
+            # Asegura que k_val esté definido correctamente
+            if subrasante_tipo == "Ingreso directo":
+                k_analisis = k_val
+            else:
+                # Si es correlación con CBR, usa una correlación típica: k = 10 * CBR (ajusta según normativa si tienes otra fórmula)
+                k_analisis = 10 * cbr
+            R = 0.95
+            C = 1.0
+            Sc = modulo_rotura
+            J = 3.2
+            Ec = 300000
+            
+            # Rangos más amplios y realistas
+            k_range = np.linspace(30, 500, 50)  # pci
+            Sc_range = np.linspace(200, 800, 50)  # psi
+            Ec_range = np.linspace(200000, 500000, 50)  # psi
+            W18_range = np.linspace(50000, 500000, 50)
+            R_range = np.linspace(0.80, 0.99, 50)
+            
+            # Cálculos de sensibilidad
+            D_k = [calcular_espesor_losa_rigido(W18, kx, R, C, Sc, J, Ec, sistema_unidades) for kx in k_range]
+            D_Sc = [calcular_espesor_losa_rigido(W18, k_analisis, R, C, scx, J, Ec, sistema_unidades) for scx in Sc_range]
+            D_Ec = [calcular_espesor_losa_rigido(W18, k_analisis, R, C, Sc, J, ecx, sistema_unidades) for ecx in Ec_range]
+            D_W18 = [calcular_espesor_losa_rigido(w18x, k_analisis, R, C, Sc, J, Ec, sistema_unidades) for w18x in W18_range]
+            D_R = [calcular_espesor_losa_rigido(W18, k_analisis, rx, C, Sc, J, Ec, sistema_unidades) for rx in R_range]
+            
+            # Gráfico combinado
+            fig_combined, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
         
         # D vs k
         ax1.plot(k_range, D_k, color='blue', linewidth=2)
@@ -830,6 +841,16 @@ with col_der:
         # Crear PDF con todos los resultados del proyecto
         if st.button("📄 Generar Reporte PDF del Proyecto", key="btn_export_pdf"):
             try:
+                # Verificar si matplotlib está disponible para el PDF
+                if not MATPLOTLIB_AVAILABLE:
+                    st.error("⚠️ Matplotlib no está disponible. No se pueden incluir gráficos en el PDF.")
+                    return
+                
+                import matplotlib
+                matplotlib.use('Agg')  # Backend no interactivo para Streamlit
+                import matplotlib.pyplot as plt
+                import numpy as np
+                
                 # Crear figura con todos los resultados
                 fig_report = plt.figure(figsize=(16, 24))
                 
@@ -1010,7 +1031,8 @@ with tabs[0]:
                 'Proyecto': proyecto,
                 'Módulo': 'Pavimento Rígido - Espaciamiento de Juntas',
                 'Fecha': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M'),
-                'Usuario': st.session_state['user']
+                'Usuario': st.session_state['user'],
+                'Sistema_Unidades': sistema_unidades
             }
             resultados = {
                 'Espesor de losa': f'{espesor_losa_m:.2f} m',
@@ -1045,7 +1067,8 @@ with tabs[0]:
                 'Proyecto': proyecto,
                 'Módulo': 'Pavimento Rígido - Sellado de Juntas',
                 'Fecha': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M'),
-                'Usuario': st.session_state['user']
+                'Usuario': st.session_state['user'],
+                'Sistema_Unidades': sistema_unidades
             }
             resultados = {
                 'Coef. dilatación (α)': f'{alpha:.1e} 1/°C',
@@ -1079,7 +1102,8 @@ with tabs[0]:
                 'Proyecto': proyecto,
                 'Módulo': 'Pavimento Rígido - Dosis de Fibras',
                 'Fecha': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M'),
-                'Usuario': st.session_state['user']
+                'Usuario': st.session_state['user'],
+                'Sistema_Unidades': sistema_unidades
             }
             resultados = {
                 'Resistencia requerida': f'{resistencia_requerida:.1f} MPa',
@@ -1120,7 +1144,8 @@ with tabs[1]:
                 'Proyecto': proyecto,
                 'Módulo': 'Pavimento Flexible - Número Estructural',
                 'Fecha': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M'),
-                'Usuario': st.session_state['user']
+                'Usuario': st.session_state['user'],
+                'Sistema_Unidades': sistema_unidades
             }
             resultados = {
                 'a₁ (coef. asfalto)': f'{a1:.2f}',
@@ -1164,7 +1189,8 @@ with tabs[1]:
                 'Proyecto': proyecto,
                 'Módulo': 'Pavimento Flexible - Fatiga del Asfalto',
                 'Fecha': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M'),
-                'Usuario': st.session_state['user']
+                'Usuario': st.session_state['user'],
+                'Sistema_Unidades': sistema_unidades
             }
             resultados = {
                 'k₁ (constante)': f'{k1:.4f}',
@@ -1205,7 +1231,8 @@ with tabs[2]:
                 'Proyecto': proyecto,
                 'Módulo': 'Veredas y Cunetas - Caudal de Diseño',
                 'Fecha': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M'),
-                'Usuario': st.session_state['user']
+                'Usuario': st.session_state['user'],
+                'Sistema_Unidades': sistema_unidades
             }
             resultados = {
                 'C (coef. escorrentía)': f'{C:.2f}',

@@ -78,6 +78,11 @@ Bienvenido al sistema profesional de diseño de pavimentos. Complete los datos d
 > **Tip:** Puede editar la tabla de tránsito y cambiar unidades en la parte inferior derecha.
 """)
 
+# Sistema de unidades
+st.markdown("### 🔧 Sistema de Unidades")
+sistema_unidades = st.radio("Seleccione el sistema de unidades:", ["Sistema Internacional (SI)", "Sistema Inglés"], 
+                           horizontal=True, key="sistema_unidades")
+
 # Panel principal con 3 columnas
 col_izq, col_centro, col_der = st.columns([1.2, 1.1, 1.2])
 
@@ -88,27 +93,43 @@ with col_izq:
         proyecto = st.text_input("Proyecto", "")
         descripcion = st.text_input("Descripción", "")
         periodo = st.number_input("Período de diseño", 5, 50, 20, help="años")
-        espesor_losa = st.number_input("Espesor de la losa", 10, 40, 20, help="mm/in", format="%d")
-        modulo_rotura = st.number_input("Módulo de rotura", 100, 1000, 450, help="psi/MPa")
+        
+        # Espesor de losa según sistema de unidades
+        if sistema_unidades == "Sistema Internacional (SI)":
+            espesor_losa = st.number_input("Espesor de la losa", 250, 1000, 500, help="mm", format="%d")
+            modulo_rotura = st.number_input("Módulo de rotura", 3.0, 7.0, 4.5, step=0.1, help="MPa")
+        else:  # Sistema Inglés
+            espesor_losa = st.number_input("Espesor de la losa", 10, 40, 20, help="pulgadas", format="%d")
+            modulo_rotura = st.number_input("Módulo de rotura", 400, 1000, 650, help="psi")
+        
         dovelas = st.radio("Dovelas", ["Sí", "No"], horizontal=True, index=0)
         bermas = st.radio("Bermas", ["Sí", "No"], horizontal=True, index=1)
     st.divider()
     st.markdown("#### <span style='color:#1976D2'>Módulo de reacción de la subrasante (K)</span>", unsafe_allow_html=True)
     subrasante_tipo = st.radio("Subrasante", ["Ingreso directo", "Correlación con CBR"], index=1)
     if subrasante_tipo == "Ingreso directo":
-        k_val = st.number_input("K =", 10, 500, 99, help="pci/MPa/m")
+        if sistema_unidades == "Sistema Internacional (SI)":
+            k_val = st.number_input("K =", 10, 200, 50, help="MPa/m")
+        else:  # Sistema Inglés
+            k_val = st.number_input("K =", 50, 500, 200, help="pci")
     else:
         cbr = st.number_input("CBR =", 1, 20, 3)
         st.info("K se calculará por correlación con CBR")
     st.divider()
     subbase = st.checkbox("Subbase", value=True)
     if subbase:
-        espesor_subbase = st.number_input("Espesor", 1, 50, 10, help="mm/in")
+        if sistema_unidades == "Sistema Internacional (SI)":
+            espesor_subbase = st.number_input("Espesor", 50, 500, 200, help="mm")
+        else:  # Sistema Inglés
+            espesor_subbase = st.number_input("Espesor", 2, 20, 8, help="pulgadas")
         tipo_subbase = st.radio("Tipo de subbase", ["Sin tratar", "Tratada con cemento"], horizontal=True)
     st.divider()
     st.markdown("#### <span style='color:#1976D2'>Barras de anclaje</span>", unsafe_allow_html=True)
     diam_barras = st.selectbox("Diámetro de barra", ["3/8\"", "1/2\"", "5/8\"", "3/4\""])
-    acero_fy = st.number_input("Acero (fy)", 200, 600, 280, help="MPa")
+    if sistema_unidades == "Sistema Internacional (SI)":
+        acero_fy = st.number_input("Acero (fy)", 200, 600, 280, help="MPa")
+    else:  # Sistema Inglés
+        acero_fy = st.number_input("Acero (fy)", 30, 90, 40, help="ksi")
     ancho_carril = st.number_input("Ancho de carril", 2.5, 4.0, 3.05, step=0.01, help="m")
 
 # -------- PANEL CENTRAL: TRÁNSITO --------
@@ -127,28 +148,47 @@ with col_centro:
     st.divider()
 
 # --- FUNCIONES DE CÁLCULO ---
-def calcular_espesor_losa_rigido(W18, k, R, C, Sc, J, Ec):
+def calcular_espesor_losa_rigido(W18, k, R, C, Sc, J, Ec, sistema_unidades):
     # D = sqrt( (W18 * k * (1-R)) / (C * (Sc * J * (Ec/k)**0.25)) )
     try:
         numerador = W18 * k * (1 - R)
         denominador = C * (Sc * J * (Ec / k) ** 0.25)
         D = (numerador / denominador) ** 0.5
+        
+        # Convertir unidades según el sistema seleccionado
+        if sistema_unidades == "Sistema Internacional (SI)":
+            # Convertir de pulgadas a mm
+            D = D * 25.4
+        # Si es sistema inglés, mantener en pulgadas
+        
         return D
     except Exception:
         return 0
 
-def calcular_junta_L(sigma_t, gamma_c, f, mu, w):
+def calcular_junta_L(sigma_t, gamma_c, f, mu, w, sistema_unidades):
     # L <= (f * mu * w) / (2 * sigma_t * gamma_c)
     try:
         L = (f * mu * w) / (2 * sigma_t * gamma_c)
+        
+        # Convertir unidades según el sistema seleccionado
+        if sistema_unidades == "Sistema Internacional (SI)":
+            # Convertir de pies a metros
+            L = L * 0.3048
+        
         return L
     except Exception:
         return 0
 
-def calcular_As_temp(gamma_c, L, h, fa, fs):
+def calcular_As_temp(gamma_c, L, h, fa, fs, sistema_unidades):
     # As = (gamma_c * L * h * fa) / (2 * fs)
     try:
         As = (gamma_c * L * h * fa) / (2 * fs)
+        
+        # Convertir unidades según el sistema seleccionado
+        if sistema_unidades == "Sistema Internacional (SI)":
+            # Convertir de pulgadas² a mm²
+            As = As * 645.16
+        
         return As
     except Exception:
         return 0
@@ -161,6 +201,35 @@ def calcular_SN_flexible(a1, D1, a2, D2, m2, a3, D3, m3):
     except Exception:
         return 0
 
+# Funciones de conversión de unidades
+def convertir_unidades(valor, unidad_origen, unidad_destino):
+    """Convierte valores entre sistemas de unidades"""
+    conversiones = {
+        # Longitud
+        ('pulg', 'mm'): 25.4,
+        ('mm', 'pulg'): 1/25.4,
+        ('pies', 'm'): 0.3048,
+        ('m', 'pies'): 1/0.3048,
+        # Presión/Esfuerzo
+        ('psi', 'MPa'): 0.00689476,
+        ('MPa', 'psi'): 145.038,
+        ('ksi', 'MPa'): 6.89476,
+        ('MPa', 'ksi'): 0.145038,
+        # Módulo de reacción
+        ('pci', 'MPa/m'): 0.271447,
+        ('MPa/m', 'pci'): 3.6839,
+        # Área
+        ('pulg²', 'mm²'): 645.16,
+        ('mm²', 'pulg²'): 1/645.16,
+        ('pulg²', 'cm²'): 6.4516,
+        ('cm²', 'pulg²'): 1/6.4516
+    }
+    
+    clave = (unidad_origen, unidad_destino)
+    if clave in conversiones:
+        return valor * conversiones[clave]
+    return valor
+
 # --- Panel derecho: lógica de cálculo y visualización ---
 with col_der:
     st.markdown("#### <span style='color:#D32F2F'>Análisis</span>", unsafe_allow_html=True)
@@ -171,38 +240,64 @@ with col_der:
 
     # --- CÁLCULO PAVIMENTO RÍGIDO ---
     if calcular:
-        # Parámetros de entrada (puedes ajustar nombres según tus campos)
-        # Ejemplo: W18, k, R, C, Sc, J, Ec
+        # Parámetros de entrada
         W18 = sum(tabla['Repeticiones']) if 'Repeticiones' in tabla else 100000
         k = k_val if subrasante_tipo == "Ingreso directo" else 99
-        R = 0.95  # Confiabilidad (puedes agregar campo)
-        C = 1.0   # Coef. drenaje (puedes agregar campo)
+        R = 0.95  # Confiabilidad
+        C = 1.0   # Coef. drenaje
         Sc = modulo_rotura  # Resistencia a flexión
-        J = 3.2   # Coef. transferencia (puedes agregar campo)
-        Ec = 300000  # Módulo elasticidad (puedes agregar campo)
-        D = calcular_espesor_losa_rigido(W18, k, R, C, Sc, J, Ec)
+        J = 3.2   # Coef. transferencia
+        Ec = 300000  # Módulo elasticidad
+        
+        # Convertir unidades para cálculos internos (siempre usar sistema inglés para fórmulas)
+        if sistema_unidades == "Sistema Internacional (SI)":
+            # Convertir Sc de MPa a psi
+            Sc_calc = Sc * 145.038
+            # Convertir k de MPa/m a pci
+            k_calc = k * 3.6839
+            # Convertir Ec de MPa a psi (asumiendo Ec = 30000 MPa)
+            Ec_calc = 30000 * 145.038
+        else:
+            Sc_calc = Sc
+            k_calc = k
+            Ec_calc = Ec
+        
+        D = calcular_espesor_losa_rigido(W18, k_calc, R, C, Sc_calc, J, Ec_calc, sistema_unidades)
 
-        # Juntas (ejemplo)
-        sigma_t = 45  # esfuerzo admisible (puedes agregar campo)
-        gamma_c = 2400  # peso unitario (puedes agregar campo)
+        # Juntas
+        sigma_t = 45  # esfuerzo admisible
+        gamma_c = 2400  # peso unitario
         f = 1.5  # coef. fricción
         mu = 1.0  # coef. fricción
         w = D * 1.0  # peso de losa (simplificado)
-        L_junta = calcular_junta_L(sigma_t, gamma_c, f, mu, w)
+        L_junta = calcular_junta_L(sigma_t, gamma_c, f, mu, w, sistema_unidades)
 
-        # Refuerzo por temperatura (si aplica)
+        # Refuerzo por temperatura
         fa = 1.5
         fs = acero_fy
-        As_temp = calcular_As_temp(gamma_c, L_junta, D, fa, fs)
+        As_temp = calcular_As_temp(gamma_c, L_junta, D, fa, fs, sistema_unidades)
 
-        # Mostrar resultados
-        st.markdown(f"**Espesor de losa calculado (D):** <span style='color:#1976D2;font-size:20px'><b>{D:.2f} cm</b></span>", unsafe_allow_html=True)
-        st.markdown(f"**Junta máxima (L):** <span style='color:#1976D2'>{L_junta:.2f} m</span>", unsafe_allow_html=True)
-        st.markdown(f"**Área de acero por temperatura (As):** <span style='color:#1976D2'>{As_temp:.2f} cm²</span>", unsafe_allow_html=True)
-        st.markdown(f"**Número de ejes equivalentes (W18):** {W18}")
-        st.markdown(f"**Módulo de reacción (k):** {k}")
-        st.markdown(f"**Resistencia a flexión (Sc):** {Sc}")
-        st.markdown(f"**Módulo elasticidad (Ec):** {Ec}")
+        # Mostrar resultados con unidades apropiadas
+        if sistema_unidades == "Sistema Internacional (SI)":
+            unidad_espesor = "mm"
+            unidad_longitud = "m"
+            unidad_area = "mm²"
+            unidad_modulo = "MPa"
+            unidad_k = "MPa/m"
+        else:
+            unidad_espesor = "pulg"
+            unidad_longitud = "pies"
+            unidad_area = "pulg²"
+            unidad_modulo = "psi"
+            unidad_k = "pci"
+        
+        st.markdown(f"**Espesor de losa calculado (D):** <span style='color:#1976D2;font-size:20px'><b>{D:.2f} {unidad_espesor}</b></span>", unsafe_allow_html=True)
+        st.markdown(f"**Junta máxima (L):** <span style='color:#1976D2'>{L_junta:.2f} {unidad_longitud}</span>", unsafe_allow_html=True)
+        st.markdown(f"**Área de acero por temperatura (As):** <span style='color:#1976D2'>{As_temp:.2f} {unidad_area}</span>", unsafe_allow_html=True)
+        st.markdown(f"**Número de ejes equivalentes (W18):** {W18:,.0f}")
+        st.markdown(f"**Módulo de reacción (k):** {k} {unidad_k}")
+        st.markdown(f"**Resistencia a flexión (Sc):** {Sc} {unidad_modulo}")
+        st.markdown(f"**Módulo elasticidad (Ec):** {Ec_calc:.0f} {unidad_modulo}")
         st.markdown(f"**Coef. transferencia (J):** {J}")
         st.markdown(f"**Coef. drenaje (C):** {C}")
         st.markdown(f"**Confiabilidad (R):** {R}")
@@ -234,11 +329,11 @@ with col_der:
         R_range = np.linspace(0.80, 0.99, 50)
         
         # Cálculos de sensibilidad
-        D_k = [calcular_espesor_losa_rigido(W18, kx, R, C, Sc, J, Ec) for kx in k_range]
-        D_Sc = [calcular_espesor_losa_rigido(W18, k, R, C, scx, J, Ec) for scx in Sc_range]
-        D_Ec = [calcular_espesor_losa_rigido(W18, k, R, C, Sc, J, ecx) for ecx in Ec_range]
-        D_W18 = [calcular_espesor_losa_rigido(w18x, k, R, C, Sc, J, Ec) for w18x in W18_range]
-        D_R = [calcular_espesor_losa_rigido(W18, k, rx, C, Sc, J, Ec) for rx in R_range]
+        D_k = [calcular_espesor_losa_rigido(W18, kx, R, C, Sc, J, Ec, sistema_unidades) for kx in k_range]
+        D_Sc = [calcular_espesor_losa_rigido(W18, k, R, C, scx, J, Ec, sistema_unidades) for scx in Sc_range]
+        D_Ec = [calcular_espesor_losa_rigido(W18, k, R, C, Sc, J, ecx, sistema_unidades) for ecx in Ec_range]
+        D_W18 = [calcular_espesor_losa_rigido(w18x, k, R, C, Sc, J, Ec, sistema_unidades) for w18x in W18_range]
+        D_R = [calcular_espesor_losa_rigido(W18, k, rx, C, Sc, J, Ec, sistema_unidades) for rx in R_range]
         
         # Gráfico combinado
         fig_combined, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
@@ -286,7 +381,7 @@ with col_der:
         st.markdown("### 📋 Resultados del Análisis de Sensibilidad")
         
         # Análisis de fatiga y erosión (simplificado)
-        D_actual = calcular_espesor_losa_rigido(W18, k, R, C, Sc, J, Ec)
+        D_actual = calcular_espesor_losa_rigido(W18, k, R, C, Sc, J, Ec, sistema_unidades)
         fatiga_actual = (W18 / (10**7)) * (D_actual / Sc) ** 3.42  # Simplificado
         erosion_actual = (W18 / (10**6)) * (D_actual / k) ** 7.35  # Simplificado
         

@@ -5,6 +5,96 @@ import pandas as pd
 from io import BytesIO
 import base64
 
+# --- GESTIÓN ROBUSTA DE DEPENDENCIAS Y GRÁFICOS ---
+# Inspirado en APP1.py, pero manteniendo la estructura de APP.py
+
+# Importar matplotlib con manejo de errores
+try:
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Rectangle, Polygon
+    import matplotlib
+    matplotlib.use('Agg')  # Backend no interactivo para Streamlit
+    MATPLOTLIB_AVAILABLE = True
+except ImportError:
+    MATPLOTLIB_AVAILABLE = False
+    plt = None
+    Rectangle = None
+    Polygon = None
+
+# Verificación de plotly
+try:
+    import plotly.express as px
+    import plotly.graph_objects as go
+    PLOTLY_AVAILABLE = True
+except ImportError:
+    PLOTLY_AVAILABLE = False
+
+# Verificación de reportlab
+try:
+    from reportlab.lib.pagesizes import A4, letter
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Image as RLImage
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.units import inch
+    REPORTLAB_AVAILABLE = True
+except ImportError:
+    REPORTLAB_AVAILABLE = False
+
+# Decorador seguro para matplotlib
+from functools import wraps
+def safe_matplotlib_plot(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not MATPLOTLIB_AVAILABLE:
+            st.warning("⚠️ Matplotlib no está disponible. No se puede generar el gráfico.")
+            return None
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            st.error(f"Error generando gráfico: {str(e)}")
+            return None
+    return wrapper
+
+# Mostrar advertencias de dependencias
+warnings = []
+if not MATPLOTLIB_AVAILABLE:
+    warnings.append("⚠️ Matplotlib no está instalado. Los gráficos básicos no estarán disponibles.")
+if not PLOTLY_AVAILABLE:
+    warnings.append("⚠️ Plotly no está instalado. Los gráficos interactivos no estarán disponibles.")
+if not REPORTLAB_AVAILABLE:
+    warnings.append("⚠️ ReportLab no está instalado. La generación de PDFs no estará disponible.")
+for warning in warnings:
+    st.warning(warning)
+
+# --- EXPORTACIÓN PDF PROFESIONAL (REPORTLAB) ---
+def exportar_pdf_reportlab(datos_proyecto, resultados):
+    if not REPORTLAB_AVAILABLE:
+        st.error("ReportLab no está instalado. Instala con: pip install reportlab")
+        return None
+    try:
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.lib.pagesizes import A4
+        from io import BytesIO
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        styles = getSampleStyleSheet()
+        elements = []
+        elements.append(Paragraph("<b>REPORTE DE DISEÑO DE PAVIMENTO</b>", styles['Title']))
+        elements.append(Spacer(1, 12))
+        for k, v in datos_proyecto.items():
+            elements.append(Paragraph(f"<b>{k}:</b> {v}", styles['Normal']))
+        elements.append(Spacer(1, 12))
+        elements.append(Paragraph("<b>Resultados Principales</b>", styles['Heading2']))
+        for k, v in resultados.items():
+            elements.append(Paragraph(f"<b>{k}:</b> {v}", styles['Normal']))
+        doc.build(elements)
+        buffer.seek(0)
+        return buffer
+    except Exception as e:
+        st.error(f"Error generando PDF: {str(e)}")
+        return None
+
 # --- Autenticación simple ---
 def check_credentials(username, password):
     valid_users = {
@@ -732,7 +822,30 @@ with tabs[0]:
     if st.button('Calcular Espaciamiento de Juntas'):
         espaciamiento = 24 * espesor_losa_m
         st.success(f'Espaciamiento recomendado: {espaciamiento:.2f} m')
-    st.caption('Fórmula: Espaciamiento = 24 × espesor de losa (m)')
+        st.caption('Fórmula: Espaciamiento = 24 × espesor de losa (m)')
+        
+        # Botón exportar PDF
+        if st.button('📄 Exportar PDF - Espaciamiento de Juntas'):
+            datos_proyecto = {
+                'Proyecto': proyecto,
+                'Módulo': 'Pavimento Rígido - Espaciamiento de Juntas',
+                'Fecha': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M'),
+                'Usuario': st.session_state['user']
+            }
+            resultados = {
+                'Espesor de losa': f'{espesor_losa_m:.2f} m',
+                'Espaciamiento calculado': f'{espaciamiento:.2f} m',
+                'Fórmula utilizada': 'Espaciamiento = 24 × espesor de losa (m)',
+                'Norma de referencia': 'PCA (Portland Cement Association)'
+            }
+            pdf_buffer = exportar_pdf_reportlab(datos_proyecto, resultados)
+            if pdf_buffer:
+                st.download_button(
+                    label="📥 Descargar PDF",
+                    data=pdf_buffer.getvalue(),
+                    file_name=f"espaciamiento_juntas_{proyecto}.pdf",
+                    mime="application/pdf"
+                )
     st.divider()
 
     st.subheader('1.2 Sellado de Juntas (Ancho Mínimo)')
@@ -743,7 +856,32 @@ with tabs[0]:
         delta_L = alpha * L_junta * delta_T
         ancho_mm = (delta_L / 2) * 1000
         st.success(f'Ancho mínimo recomendado: {ancho_mm:.2f} mm')
-    st.caption('Fórmula: Ancho (mm) = (ΔL/2) × 1000, con ΔL = α × L × ΔT')
+        st.caption('Fórmula: Ancho (mm) = (ΔL/2) × 1000, con ΔL = α × L × ΔT')
+        
+        # Botón exportar PDF
+        if st.button('📄 Exportar PDF - Sellado de Juntas'):
+            datos_proyecto = {
+                'Proyecto': proyecto,
+                'Módulo': 'Pavimento Rígido - Sellado de Juntas',
+                'Fecha': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M'),
+                'Usuario': st.session_state['user']
+            }
+            resultados = {
+                'Coef. dilatación (α)': f'{alpha:.1e} 1/°C',
+                'Longitud entre juntas (L)': f'{L_junta:.1f} m',
+                'Variación temperatura (ΔT)': f'{delta_T:.1f} °C',
+                'Dilatación térmica (ΔL)': f'{delta_L:.6f} m',
+                'Ancho mínimo': f'{ancho_mm:.2f} mm',
+                'Fórmula': 'Ancho (mm) = (ΔL/2) × 1000, ΔL = α × L × ΔT'
+            }
+            pdf_buffer = exportar_pdf_reportlab(datos_proyecto, resultados)
+            if pdf_buffer:
+                st.download_button(
+                    label="📥 Descargar PDF",
+                    data=pdf_buffer.getvalue(),
+                    file_name=f"sellado_juntas_{proyecto}.pdf",
+                    mime="application/pdf"
+                )
     st.divider()
 
     st.subheader('1.3 Dosis de Fibras de Acero')
@@ -752,7 +890,30 @@ with tabs[0]:
     if st.button('Calcular Dosis de Fibras de Acero'):
         dosis = resistencia_requerida / eficiencia_fibra
         st.success(f'Dosis recomendada: {dosis:.2f} kg/m³')
-    st.caption('Fórmula: Dosis = Resistencia requerida / Eficiencia de la fibra')
+        st.caption('Fórmula: Dosis = Resistencia requerida / Eficiencia de la fibra')
+        
+        # Botón exportar PDF
+        if st.button('📄 Exportar PDF - Dosis de Fibras'):
+            datos_proyecto = {
+                'Proyecto': proyecto,
+                'Módulo': 'Pavimento Rígido - Dosis de Fibras',
+                'Fecha': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M'),
+                'Usuario': st.session_state['user']
+            }
+            resultados = {
+                'Resistencia requerida': f'{resistencia_requerida:.1f} MPa',
+                'Eficiencia de la fibra': f'{eficiencia_fibra:.2f} MPa/kg',
+                'Dosis calculada': f'{dosis:.2f} kg/m³',
+                'Fórmula': 'Dosis = Resistencia requerida / Eficiencia de la fibra'
+            }
+            pdf_buffer = exportar_pdf_reportlab(datos_proyecto, resultados)
+            if pdf_buffer:
+                st.download_button(
+                    label="📥 Descargar PDF",
+                    data=pdf_buffer.getvalue(),
+                    file_name=f"dosis_fibras_{proyecto}.pdf",
+                    mime="application/pdf"
+                )
     st.divider()
 
 # --- PAVIMENTO FLEXIBLE ---
@@ -770,7 +931,37 @@ with tabs[1]:
     if st.button('Calcular Número Estructural SN'):
         SN = a1*D1 + a2*D2*m2 + a3*D3*m3
         st.success(f'Número estructural SN: {SN:.2f}')
-    st.caption('Fórmula: SN = a₁·D₁ + a₂·D₂·m₂ + a₃·D₃·m₃')
+        st.caption('Fórmula: SN = a₁·D₁ + a₂·D₂·m₂ + a₃·D₃·m₃')
+        
+        # Botón exportar PDF
+        if st.button('📄 Exportar PDF - Número Estructural'):
+            datos_proyecto = {
+                'Proyecto': proyecto,
+                'Módulo': 'Pavimento Flexible - Número Estructural',
+                'Fecha': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M'),
+                'Usuario': st.session_state['user']
+            }
+            resultados = {
+                'a₁ (coef. asfalto)': f'{a1:.2f}',
+                'D₁ (espesor asfalto)': f'{D1:.1f} pulg',
+                'a₂ (coef. base)': f'{a2:.2f}',
+                'D₂ (espesor base)': f'{D2:.1f} pulg',
+                'm₂ (factor drenaje base)': f'{m2:.2f}',
+                'a₃ (coef. subbase)': f'{a3:.2f}',
+                'D₃ (espesor subbase)': f'{D3:.1f} pulg',
+                'm₃ (factor drenaje subbase)': f'{m3:.2f}',
+                'Número estructural SN': f'{SN:.2f}',
+                'Fórmula': 'SN = a₁·D₁ + a₂·D₂·m₂ + a₃·D₃·m₃',
+                'Norma': 'AASHTO 93'
+            }
+            pdf_buffer = exportar_pdf_reportlab(datos_proyecto, resultados)
+            if pdf_buffer:
+                st.download_button(
+                    label="📥 Descargar PDF",
+                    data=pdf_buffer.getvalue(),
+                    file_name=f"numero_estructural_{proyecto}.pdf",
+                    mime="application/pdf"
+                )
     st.divider()
 
     st.subheader('2.2 Fatiga del Asfalto (MEPDG)')
@@ -783,7 +974,34 @@ with tabs[1]:
         import math
         Nf = k1 * (1/(eps_t*1e-6))**k2 * (1/E)**k3
         st.success(f'Número de ciclos hasta falla (Nf): {Nf:,.0f}')
-    st.caption('Fórmula: Nf = k₁·(1/εt)^k₂·(1/E)^k₃, εt en microstrain, E en MPa')
+        st.caption('Fórmula: Nf = k₁·(1/εt)^k₂·(1/E)^k₃, εt en microstrain, E en MPa')
+        
+        # Botón exportar PDF
+        if st.button('📄 Exportar PDF - Fatiga del Asfalto'):
+            datos_proyecto = {
+                'Proyecto': proyecto,
+                'Módulo': 'Pavimento Flexible - Fatiga del Asfalto',
+                'Fecha': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M'),
+                'Usuario': st.session_state['user']
+            }
+            resultados = {
+                'k₁ (constante)': f'{k1:.4f}',
+                'k₂ (exponente εt)': f'{k2:.3f}',
+                'k₃ (exponente E)': f'{k3:.3f}',
+                'εt (deformación)': f'{eps_t:.1f} microstrain',
+                'E (módulo elasticidad)': f'{E:.0f} MPa',
+                'Nf (ciclos hasta falla)': f'{Nf:,.0f}',
+                'Fórmula': 'Nf = k₁·(1/εt)^k₂·(1/E)^k₃',
+                'Método': 'MEPDG (Mechanistic-Empirical Pavement Design Guide)'
+            }
+            pdf_buffer = exportar_pdf_reportlab(datos_proyecto, resultados)
+            if pdf_buffer:
+                st.download_button(
+                    label="📥 Descargar PDF",
+                    data=pdf_buffer.getvalue(),
+                    file_name=f"fatiga_asfalto_{proyecto}.pdf",
+                    mime="application/pdf"
+                )
     st.divider()
 
 # --- VEREDAS Y CUNETAS ---
@@ -796,7 +1014,32 @@ with tabs[2]:
     if st.button('Calcular Caudal de Diseño Q'):
         Q = (C * I * A) / 360
         st.success(f'Caudal de diseño Q: {Q:.3f} m³/s')
-    st.caption('Fórmula: Q = (C·I·A)/360, I en mm/h, A en ha')
+        st.caption('Fórmula: Q = (C·I·A)/360, I en mm/h, A en ha')
+        
+        # Botón exportar PDF
+        if st.button('📄 Exportar PDF - Caudal de Diseño'):
+            datos_proyecto = {
+                'Proyecto': proyecto,
+                'Módulo': 'Veredas y Cunetas - Caudal de Diseño',
+                'Fecha': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M'),
+                'Usuario': st.session_state['user']
+            }
+            resultados = {
+                'C (coef. escorrentía)': f'{C:.2f}',
+                'I (intensidad lluvia)': f'{I:.1f} mm/h',
+                'A (área drenaje)': f'{A:.2f} ha',
+                'Caudal de diseño Q': f'{Q:.3f} m³/s',
+                'Fórmula': 'Q = (C·I·A)/360',
+                'Método': 'Método Racional - SENAMHI'
+            }
+            pdf_buffer = exportar_pdf_reportlab(datos_proyecto, resultados)
+            if pdf_buffer:
+                st.download_button(
+                    label="📥 Descargar PDF",
+                    data=pdf_buffer.getvalue(),
+                    file_name=f"caudal_diseno_{proyecto}.pdf",
+                    mime="application/pdf"
+                )
     st.divider()
 
     st.subheader('3.2 Capacidad de Cuneta Triangular (Manning)')
@@ -807,20 +1050,75 @@ with tabs[2]:
         import math
         Qc = (1.49 / n) * ((y**2 * S) / 2) * math.sqrt(S)
         st.success(f'Capacidad de cuneta Qc: {Qc:.3f} m³/s')
-    st.caption('Fórmula: Qc = (1.49/n)·(y²·S/2)·√S')
+        st.caption('Fórmula: Qc = (1.49/n)·(y²·S/2)·√S')
+        
+        # Botón exportar PDF
+        if st.button('📄 Exportar PDF - Capacidad de Cuneta'):
+            datos_proyecto = {
+                'Proyecto': proyecto,
+                'Módulo': 'Veredas y Cunetas - Capacidad de Cuneta',
+                'Fecha': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M'),
+                'Usuario': st.session_state['user']
+            }
+            resultados = {
+                'n (rugosidad Manning)': f'{n:.3f}',
+                'y (altura agua)': f'{y:.2f} m',
+                'S (pendiente)': f'{S:.4f}',
+                'Capacidad cuneta Qc': f'{Qc:.3f} m³/s',
+                'Fórmula': 'Qc = (1.49/n)·(y²·S/2)·√S',
+                'Sección': 'Triangular'
+            }
+            pdf_buffer = exportar_pdf_reportlab(datos_proyecto, resultados)
+            if pdf_buffer:
+                st.download_button(
+                    label="📥 Descargar PDF",
+                    data=pdf_buffer.getvalue(),
+                    file_name=f"capacidad_cuneta_{proyecto}.pdf",
+                    mime="application/pdf"
+                )
     st.divider()
 
     st.subheader('3.3 Accesibilidad: Pendiente de Rampas (RNE)')
     pendiente = st.number_input('Pendiente (%)', min_value=1.0, max_value=20.0, value=8.0, step=0.1)
     longitud = st.number_input('Longitud de rampa (m)', min_value=0.5, max_value=10.0, value=2.0, step=0.1)
     if st.button('Validar Pendiente de Rampa'):
-        if pendiente <= 12 and longitud <= 3:
+        cumple_pendiente = pendiente <= 12
+        cumple_longitud = longitud <= 3
+        if cumple_pendiente and cumple_longitud:
             st.success('Cumple con RNE: Pendiente y longitud dentro de los límites.')
-        elif pendiente > 12:
+            estado = "CUMPLE"
+        elif not cumple_pendiente:
             st.error('No cumple: Pendiente supera el 12% permitido por RNE.')
-        elif longitud > 3:
+            estado = "NO CUMPLE - Pendiente"
+        elif not cumple_longitud:
             st.error('No cumple: Longitud supera el máximo de 3 m permitido por RNE.')
-    st.caption('Requisito: Pendiente ≤ 12%, longitud máxima 3 m (RNE)')
+            estado = "NO CUMPLE - Longitud"
+        st.caption('Requisito: Pendiente ≤ 12%, longitud máxima 3 m (RNE)')
+        
+        # Botón exportar PDF
+        if st.button('📄 Exportar PDF - Validación Rampa'):
+            datos_proyecto = {
+                'Proyecto': proyecto,
+                'Módulo': 'Veredas y Cunetas - Validación Rampa',
+                'Fecha': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M'),
+                'Usuario': st.session_state['user']
+            }
+            resultados = {
+                'Pendiente': f'{pendiente:.1f} %',
+                'Longitud': f'{longitud:.1f} m',
+                'Estado': estado,
+                'Límite pendiente': '≤ 12%',
+                'Límite longitud': '≤ 3 m',
+                'Norma': 'RNE (Reglamento Nacional de Edificaciones)'
+            }
+            pdf_buffer = exportar_pdf_reportlab(datos_proyecto, resultados)
+            if pdf_buffer:
+                st.download_button(
+                    label="📥 Descargar PDF",
+                    data=pdf_buffer.getvalue(),
+                    file_name=f"validacion_rampa_{proyecto}.pdf",
+                    mime="application/pdf"
+                )
     st.divider()
 
 # --- DRENAJE ---
@@ -833,7 +1131,31 @@ with tabs[3]:
         import math
         D = math.sqrt(4 * Q_dren / (math.pi * v_dren))
         st.success(f'Diámetro mínimo recomendado: {D:.3f} m')
-    st.caption('Fórmula: D = sqrt(4Q/(πv)), Q en m³/s, v en m/s')
+        st.caption('Fórmula: D = sqrt(4Q/(πv)), Q en m³/s, v en m/s')
+        
+        # Botón exportar PDF
+        if st.button('📄 Exportar PDF - Diámetro Alcantarilla'):
+            datos_proyecto = {
+                'Proyecto': proyecto,
+                'Módulo': 'Drenaje - Diámetro Alcantarilla',
+                'Fecha': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M'),
+                'Usuario': st.session_state['user']
+            }
+            resultados = {
+                'Q (caudal)': f'{Q_dren:.3f} m³/s',
+                'v (velocidad mínima)': f'{v_dren:.2f} m/s',
+                'Diámetro mínimo': f'{D:.3f} m',
+                'Fórmula': 'D = sqrt(4Q/(πv))',
+                'Norma': 'MTC (Manual de Carreteras)'
+            }
+            pdf_buffer = exportar_pdf_reportlab(datos_proyecto, resultados)
+            if pdf_buffer:
+                st.download_button(
+                    label="📥 Descargar PDF",
+                    data=pdf_buffer.getvalue(),
+                    file_name=f"diametro_alcantarilla_{proyecto}.pdf",
+                    mime="application/pdf"
+                )
     st.divider()
 
 # --- NORMATIVAS LOCALES ---
@@ -844,17 +1166,69 @@ with tabs[4]:
     if st.button('Calcular K (Módulo de reacción)'):
         K = 10 * CBR
         st.success(f'Módulo de reacción K: {K:.1f} MPa/m')
-    st.caption('Fórmula: K = 10 × CBR (MTC). CBR ≤ 50')
+        st.caption('Fórmula: K = 10 × CBR (MTC). CBR ≤ 50')
+        
+        # Botón exportar PDF
+        if st.button('📄 Exportar PDF - Correlación K-CBR'):
+            datos_proyecto = {
+                'Proyecto': proyecto,
+                'Módulo': 'Normativas Locales - Correlación K-CBR',
+                'Fecha': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M'),
+                'Usuario': st.session_state['user']
+            }
+            resultados = {
+                'CBR': f'{CBR:.1f} %',
+                'Módulo de reacción K': f'{K:.1f} MPa/m',
+                'Fórmula': 'K = 10 × CBR',
+                'Límite CBR': '≤ 50%',
+                'Norma': 'MTC (Manual de Carreteras)'
+            }
+            pdf_buffer = exportar_pdf_reportlab(datos_proyecto, resultados)
+            if pdf_buffer:
+                st.download_button(
+                    label="📥 Descargar PDF",
+                    data=pdf_buffer.getvalue(),
+                    file_name=f"correlacion_k_cbr_{proyecto}.pdf",
+                    mime="application/pdf"
+                )
     st.divider()
 
-    st.subheader('5.2 Ajuste de Resistencia de Concreto f’c por Altitud')
-    fc = st.number_input('f’c (resistencia, MPa)', min_value=10.0, max_value=60.0, value=28.0, step=0.1)
+    st.subheader('5.2 Ajuste de Resistencia de Concreto f\'c por Altitud')
+    fc = st.number_input('f\'c (resistencia, MPa)', min_value=10.0, max_value=60.0, value=28.0, step=0.1)
     altitud = st.number_input('Altitud (msnm)', min_value=0, max_value=5000, value=3800, step=10)
-    if st.button('Calcular f’c Ajustado por Altitud'):
+    if st.button('Calcular f\'c Ajustado por Altitud'):
         if altitud > 3800:
             fc_ajustado = fc + 5
-            st.success(f"f’c ajustado: {fc_ajustado:.1f} MPa (se suma 5 MPa por altitud > 3800 msnm)")
+            st.success(f"f'c ajustado: {fc_ajustado:.1f} MPa (se suma 5 MPa por altitud > 3800 msnm)")
+            estado_ajuste = f"Ajustado (+5 MPa)"
         else:
-            st.info(f"f’c no requiere ajuste: {fc:.1f} MPa (altitud ≤ 3800 msnm)")
-    st.caption('Fórmula: f’c_ajustado = f’c + 5 MPa para altitud > 3800 msnm (MTC)')
+            fc_ajustado = fc
+            st.info(f"f'c no requiere ajuste: {fc:.1f} MPa (altitud ≤ 3800 msnm)")
+            estado_ajuste = "Sin ajuste"
+        st.caption('Fórmula: f\'c_ajustado = f\'c + 5 MPa para altitud > 3800 msnm (MTC)')
+        
+        # Botón exportar PDF
+        if st.button('📄 Exportar PDF - Ajuste f\'c por Altitud'):
+            datos_proyecto = {
+                'Proyecto': proyecto,
+                'Módulo': 'Normativas Locales - Ajuste f\'c por Altitud',
+                'Fecha': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M'),
+                'Usuario': st.session_state['user']
+            }
+            resultados = {
+                'f\'c original': f'{fc:.1f} MPa',
+                'Altitud': f'{altitud} msnm',
+                'f\'c ajustado': f'{fc_ajustado:.1f} MPa',
+                'Estado': estado_ajuste,
+                'Fórmula': 'f\'c_ajustado = f\'c + 5 MPa para altitud > 3800 msnm',
+                'Norma': 'MTC (Manual de Carreteras)'
+            }
+            pdf_buffer = exportar_pdf_reportlab(datos_proyecto, resultados)
+            if pdf_buffer:
+                st.download_button(
+                    label="📥 Descargar PDF",
+                    data=pdf_buffer.getvalue(),
+                    file_name=f"ajuste_fc_altitud_{proyecto}.pdf",
+                    mime="application/pdf"
+                )
     st.divider()

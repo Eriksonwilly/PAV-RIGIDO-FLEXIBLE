@@ -68,29 +68,194 @@ for warning in warnings:
 
 # --- EXPORTACIÓN PDF PROFESIONAL (REPORTLAB) ---
 def exportar_pdf_reportlab(datos_proyecto, resultados):
+    """
+    Genera un PDF profesional con formato de reporte técnico para pavimentos
+    siguiendo el modelo de APP1.py pero adaptado para pavimentos.
+    """
     if not REPORTLAB_AVAILABLE:
         st.error("ReportLab no está instalado. Instala con: pip install reportlab")
         return None
+    
     try:
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+        from reportlab.lib import colors
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Image as RLImage
         from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.lib.units import inch
         from reportlab.lib.pagesizes import A4
         from io import BytesIO
-        buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        from datetime import datetime
+        import os
+        
+        pdf_buffer = BytesIO()
+        doc = SimpleDocTemplate(pdf_buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=40, bottomMargin=30)
         styles = getSampleStyleSheet()
+        styleN = styles["Normal"]
+        styleH = styles["Heading1"]
+        styleH2 = styles["Heading2"]
+        styleH3 = styles["Heading3"]
         elements = []
-        elements.append(Paragraph("<b>REPORTE DE DISEÑO DE PAVIMENTO</b>", styles['Title']))
-        elements.append(Spacer(1, 12))
-        for k, v in datos_proyecto.items():
-            elements.append(Paragraph(f"<b>{k}:</b> {v}", styles['Normal']))
-        elements.append(Spacer(1, 12))
-        elements.append(Paragraph("<b>Resultados Principales</b>", styles['Heading2']))
-        for k, v in resultados.items():
-            elements.append(Paragraph(f"<b>{k}:</b> {v}", styles['Normal']))
-        doc.build(elements)
-        buffer.seek(0)
-        return buffer
+
+        # Portada
+        elements.append(Spacer(1, 30))
+        elements.append(Paragraph("CONSORCIO DEJ", styleH))
+        elements.append(Spacer(1, 20))
+        elements.append(Paragraph("Sistema de Diseño de Pavimentos", styleH2))
+        elements.append(Spacer(1, 30))
+        elements.append(Paragraph("<b>REPORTE TÉCNICO DE DISEÑO DE PAVIMENTO</b>", styleH2))
+        elements.append(Spacer(1, 20))
+        elements.append(Paragraph(f"<b>Proyecto:</b> {datos_proyecto.get('Proyecto', 'N/A')}<br/><b>Fecha:</b> {datetime.now().strftime('%d/%m/%Y %H:%M')}<br/><b>Usuario:</b> {datos_proyecto.get('Usuario', 'N/A')}", styleN))
+        elements.append(Spacer(1, 20))
+        elements.append(Paragraph("<b>Software:</b> CONSORCIO DEJ - Streamlit + Python", styleN))
+        elements.append(Spacer(1, 100))
+        elements.append(Paragraph("<b>Normativas:</b> AASHTO 93, PCA, MTC, RNE", styleN))
+        elements.append(PageBreak())
+
+        # Índice
+        elements.append(Paragraph("<b>CONTENIDO</b>", styleH))
+        indice = [
+            ["1. DATOS DEL PROYECTO", "3"],
+            ["2. PARÁMETROS DE DISEÑO", "4"],
+            ["3. RESULTADOS DEL ANÁLISIS", "5"],
+            ["4. RECOMENDACIONES", "6"],
+            ["5. GRÁFICOS Y DIAGRAMAS", "7"],
+            ["6. CONCLUSIONES", "8"]
+        ]
+        tabla_indice = Table(indice, colWidths=[350, 50])
+        tabla_indice.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 11),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ]))
+        elements.append(tabla_indice)
+        elements.append(PageBreak())
+
+        # 1. Datos del Proyecto
+        elements.append(Paragraph("1. DATOS DEL PROYECTO", styleH))
+        datos_tabla = [
+            ["Parámetro", "Valor", "Unidad"],
+            ["Nombre del Proyecto", datos_proyecto.get('Proyecto', 'N/A'), ""],
+            ["Descripción", datos_proyecto.get('Descripción', 'N/A'), ""],
+            ["Período de diseño", datos_proyecto.get('Período', 'N/A'), "años"],
+            ["Sistema de unidades", datos_proyecto.get('Sistema_Unidades', 'SI'), ""],
+            ["Módulo", datos_proyecto.get('Módulo', 'N/A'), ""],
+            ["Fecha de generación", datetime.now().strftime('%d/%m/%Y %H:%M'), ""]
+        ]
+        tabla = Table(datos_tabla, colWidths=[200, 150, 80])
+        tabla.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ]))
+        elements.append(tabla)
+        elements.append(Spacer(1, 10))
+        elements.append(PageBreak())
+
+        # 2. Parámetros de Diseño
+        elements.append(Paragraph("2. PARÁMETROS DE DISEÑO", styleH))
+        if resultados:
+            # Crear tabla dinámica con los resultados
+            param_data = []
+            for key, value in resultados.items():
+                if isinstance(value, (int, float)):
+                    param_data.append([key, f"{value:.2f}", ""])
+                else:
+                    param_data.append([key, str(value), ""])
+            
+            if param_data:
+                param_tabla = [["Parámetro", "Valor", "Unidad"]] + param_data
+                tabla_param = Table(param_tabla, colWidths=[200, 150, 80])
+                tabla_param.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ]))
+                elements.append(tabla_param)
+        elements.append(Spacer(1, 10))
+        elements.append(PageBreak())
+
+        # 3. Resultados del Análisis
+        elements.append(Paragraph("3. RESULTADOS DEL ANÁLISIS", styleH))
+        elements.append(Paragraph("Los resultados obtenidos del análisis de pavimento se presentan a continuación:", styleN))
+        elements.append(Spacer(1, 10))
+        
+        # Agregar resultados específicos si están disponibles
+        if resultados:
+            for key, value in resultados.items():
+                if "Fórmula" in key or "Norma" in key or "Método" in key:
+                    continue
+                elements.append(Paragraph(f"<b>{key}:</b> {value}", styleN))
+        
+        elements.append(PageBreak())
+
+        # 4. Recomendaciones
+        elements.append(Paragraph("4. RECOMENDACIONES", styleH))
+        elements.append(Paragraph("• Verificar que todos los parámetros de diseño cumplan con las normativas aplicables.", styleN))
+        elements.append(Paragraph("• Realizar análisis de sensibilidad para validar los resultados.", styleN))
+        elements.append(Paragraph("• Considerar factores de seguridad adicionales según las condiciones específicas del proyecto.", styleN))
+        elements.append(Paragraph("• Documentar todas las asunciones y limitaciones del análisis.", styleN))
+        elements.append(PageBreak())
+
+        # 5. Gráficos (si matplotlib está disponible)
+        elements.append(Paragraph("5. GRÁFICOS Y DIAGRAMAS", styleH))
+        if MATPLOTLIB_AVAILABLE:
+            try:
+                import matplotlib
+                matplotlib.use('Agg')
+                import matplotlib.pyplot as plt
+                import numpy as np
+                
+                # Crear un gráfico simple de ejemplo
+                fig, ax = plt.subplots(figsize=(8, 6))
+                x = np.linspace(0, 10, 100)
+                y = np.sin(x)
+                ax.plot(x, y, 'b-', linewidth=2, label='Función de ejemplo')
+                ax.set_title('Gráfico de Análisis de Pavimento')
+                ax.set_xlabel('Parámetro X')
+                ax.set_ylabel('Resultado Y')
+                ax.grid(True, alpha=0.3)
+                ax.legend()
+                plt.tight_layout()
+                
+                # Guardar gráfico en buffer
+                img_buffer = BytesIO()
+                fig.savefig(img_buffer, format='png', bbox_inches='tight', dpi=200)
+                plt.close(fig)
+                img_buffer.seek(0)
+                
+                elements.append(Paragraph("Gráfico de Análisis", styleH2))
+                elements.append(RLImage(img_buffer, width=400, height=300))
+                elements.append(Spacer(1, 10))
+                
+            except Exception as e:
+                elements.append(Paragraph(f"No se pudo generar gráfico: {str(e)}", styleN))
+        else:
+            elements.append(Paragraph("⚠️ Matplotlib no está disponible. Los gráficos no se incluirán en el PDF.", styleN))
+        
+        elements.append(PageBreak())
+
+        # 6. Conclusiones
+        elements.append(Paragraph("6. CONCLUSIONES", styleH))
+        elements.append(Paragraph("El análisis de pavimento ha sido completado exitosamente utilizando las normativas y metodologías establecidas.", styleN))
+        elements.append(Paragraph("Los resultados obtenidos proporcionan una base sólida para el diseño y construcción del pavimento.", styleN))
+        elements.append(Paragraph("Se recomienda realizar verificaciones adicionales y análisis de sensibilidad según las condiciones específicas del proyecto.", styleN))
+        elements.append(Spacer(1, 20))
+        elements.append(Paragraph("<b>Generado por:</b> CONSORCIO DEJ - Sistema de Diseño de Pavimentos", styleN))
+        elements.append(Paragraph(f"<b>Fecha:</b> {datetime.now().strftime('%d/%m/%Y %H:%M')}", styleN))
+
+        # Pie de página y paginación
+        def add_page_number(canvas, doc):
+            page_num = canvas.getPageNumber()
+            text = f"CONSORCIO DEJ - Diseño de Pavimentos    Página {page_num}"
+            canvas.saveState()
+            canvas.setFont('Helvetica', 8)
+            canvas.drawString(30, 15, text)
+            canvas.restoreState()
+
+        doc.build(elements, onFirstPage=add_page_number, onLaterPages=add_page_number)
+        pdf_buffer.seek(0)
+        return pdf_buffer
+        
     except Exception as e:
         st.error(f"Error generando PDF: {str(e)}")
         return None

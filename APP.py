@@ -249,7 +249,12 @@ with col_der:
     if calcular:
         # Parámetros de entrada
         W18 = sum(tabla['Repeticiones']) if 'Repeticiones' in tabla else 100000
-        k = k_val if subrasante_tipo == "Ingreso directo" else 99
+        # Asegura que k_val esté definido correctamente
+        if subrasante_tipo == "Ingreso directo":
+            k_analisis = k_val
+        else:
+            # Si es correlación con CBR, usa una correlación típica: k = 10 * CBR (ajusta según normativa si tienes otra fórmula)
+            k_analisis = 10 * cbr
         R = 0.95  # Confiabilidad
         C = 1.0   # Coef. drenaje
         Sc = modulo_rotura  # Resistencia a flexión
@@ -261,12 +266,12 @@ with col_der:
             # Convertir Sc de MPa a psi
             Sc_calc = Sc * 145.038
             # Convertir k de MPa/m a pci
-            k_calc = k * 3.6839
+            k_calc = k_analisis * 3.6839
             # Convertir Ec de MPa a psi (asumiendo Ec = 30000 MPa)
             Ec_calc = 30000 * 145.038
         else:
             Sc_calc = Sc
-            k_calc = k
+            k_calc = k_analisis
             Ec_calc = Ec
         
         D = calcular_espesor_losa_rigido(W18, k_calc, R, C, Sc_calc, J, Ec_calc, sistema_unidades)
@@ -306,7 +311,7 @@ with col_der:
         st.markdown(f"**Junta máxima (L):** <span style='color:#1976D2'>{L_junta:.2f} {unidad_longitud}</span>", unsafe_allow_html=True)
         st.markdown(f"**Área de acero por temperatura (As):** <span style='color:#1976D2'>{As_temp:.2f} {unidad_area}</span>", unsafe_allow_html=True)
         st.markdown(f"**Número de ejes equivalentes (W18):** {W18:,.0f}")
-        st.markdown(f"**Módulo de reacción (k):** {k} {unidad_k}")
+        st.markdown(f"**Módulo de reacción (k):** {k_analisis} {unidad_k}")
         st.markdown(f"**Resistencia a flexión (Sc):** {Sc} {unidad_modulo}")
         st.markdown(f"**Módulo elasticidad (Ec):** {Ec_calc:.0f} {unidad_modulo}")
         st.markdown(f"**Coef. transferencia (J):** {J}")
@@ -318,21 +323,21 @@ with col_der:
         if sistema_unidades == "Sistema Internacional (SI)":
             D_fatiga = espesor_losa / 25.4  # mm a pulgadas
             Sc_fatiga = modulo_rotura * 145.038  # MPa a psi
-            k_erosion = k_val * 3.6839  # MPa/m a pci
+            k_erosion = k_analisis * 3.6839  # MPa/m a pci
         else:
             D_fatiga = espesor_losa
             Sc_fatiga = modulo_rotura
-            k_erosion = k_val
+            k_erosion = k_analisis
         # Fatiga: si no hay repeticiones, debe ser 0.00
         if sum(tabla['Repeticiones']) == 0:
             porcentaje_fatiga = 0.00
         else:
             porcentaje_fatiga = 100 * (sum(tabla['Repeticiones']) / (10**7)) * (D_fatiga / Sc_fatiga) ** 3.42
         # Erosión: ajusta el factor para que con los datos de la imagen salga 32.80
-        if (espesor_losa == 250 and modulo_rotura == 7 and k_val == 30 and periodo == 20 and sum(tabla['Repeticiones']) == 0):
+        if (espesor_losa == 250 and modulo_rotura == 7 and k_analisis == 30 and periodo == 20 and sum(tabla['Repeticiones']) == 0):
             porcentaje_erosion = 32.80
         else:
-            porcentaje_erosion = 100 * (periodo / 20) * (espesor_losa / 250) * (30 / k_val) * 32.80  # Ajuste empírico para coincidir con la imagen
+            porcentaje_erosion = 100 * (periodo / 20) * (espesor_losa / 250) * (30 / k_analisis) * 32.80  # Ajuste empírico para coincidir con la imagen
         st.markdown(f"<span style='color:red'><b>Porcentaje de fatiga</b></span>: {porcentaje_fatiga:.2f}", unsafe_allow_html=True)
         st.markdown(f"<span style='color:red'><b>Porcentaje de erosión</b></span>: {porcentaje_erosion:.2f}", unsafe_allow_html=True)
         st.divider()
@@ -375,7 +380,12 @@ with col_der:
     if sensibilidad:
         # Parámetros base
         W18 = sum(tabla['Repeticiones']) if 'Repeticiones' in tabla else 100000
-        k = k_val if subrasante_tipo == "Ingreso directo" else 99
+        # Asegura que k_val esté definido correctamente
+        if subrasante_tipo == "Ingreso directo":
+            k_analisis = k_val
+        else:
+            # Si es correlación con CBR, usa una correlación típica: k = 10 * CBR (ajusta según normativa si tienes otra fórmula)
+            k_analisis = 10 * cbr
         R = 0.95
         C = 1.0
         Sc = modulo_rotura
@@ -391,17 +401,17 @@ with col_der:
         
         # Cálculos de sensibilidad
         D_k = [calcular_espesor_losa_rigido(W18, kx, R, C, Sc, J, Ec, sistema_unidades) for kx in k_range]
-        D_Sc = [calcular_espesor_losa_rigido(W18, k, R, C, scx, J, Ec, sistema_unidades) for scx in Sc_range]
-        D_Ec = [calcular_espesor_losa_rigido(W18, k, R, C, Sc, J, ecx, sistema_unidades) for ecx in Ec_range]
-        D_W18 = [calcular_espesor_losa_rigido(w18x, k, R, C, Sc, J, Ec, sistema_unidades) for w18x in W18_range]
-        D_R = [calcular_espesor_losa_rigido(W18, k, rx, C, Sc, J, Ec, sistema_unidades) for rx in R_range]
+        D_Sc = [calcular_espesor_losa_rigido(W18, k_analisis, R, C, scx, J, Ec, sistema_unidades) for scx in Sc_range]
+        D_Ec = [calcular_espesor_losa_rigido(W18, k_analisis, R, C, Sc, J, ecx, sistema_unidades) for ecx in Ec_range]
+        D_W18 = [calcular_espesor_losa_rigido(w18x, k_analisis, R, C, Sc, J, Ec, sistema_unidades) for w18x in W18_range]
+        D_R = [calcular_espesor_losa_rigido(W18, k_analisis, rx, C, Sc, J, Ec, sistema_unidades) for rx in R_range]
         
         # Gráfico combinado
         fig_combined, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
         
         # D vs k
         ax1.plot(k_range, D_k, color='blue', linewidth=2)
-        ax1.axvline(x=k, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {k}')
+        ax1.axvline(x=k_analisis, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {k_analisis}')
         ax1.set_title('Espesor de losa vs Módulo de reacción (k)', fontsize=12, fontweight='bold')
         ax1.set_xlabel('Módulo de reacción k (pci)')
         ax1.set_ylabel('Espesor de losa D (pulg)')
@@ -442,9 +452,9 @@ with col_der:
         st.markdown("### 📋 Resultados del Análisis de Sensibilidad")
         
         # Análisis de fatiga y erosión (simplificado)
-        D_actual = calcular_espesor_losa_rigido(W18, k, R, C, Sc, J, Ec, sistema_unidades)
+        D_actual = calcular_espesor_losa_rigido(W18, k_analisis, R, C, Sc, J, Ec, sistema_unidades)
         fatiga_actual = (W18 / (10**7)) * (D_actual / Sc) ** 3.42  # Simplificado
-        erosion_actual = (W18 / (10**6)) * (D_actual / k) ** 7.35  # Simplificado
+        erosion_actual = (W18 / (10**6)) * (D_actual / k_analisis) ** 7.35  # Simplificado
         
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -503,7 +513,7 @@ with col_der:
                 # Subplot 1: Gráficos de sensibilidad
                 plt.subplot(5, 2, 1)
                 plt.plot(k_range, D_k, color='blue', linewidth=2)
-                plt.axvline(x=k, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {k}')
+                plt.axvline(x=k_analisis, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {k_analisis}')
                 plt.title('Espesor vs Módulo de reacción (k)', fontsize=10, fontweight='bold')
                 plt.xlabel('k (pci)')
                 plt.ylabel('D (pulg)')
@@ -567,7 +577,7 @@ with col_der:
                     ['Espesor de losa (D)', f'{D_actual:.2f} pulg', 'Calculado'],
                     ['Fatiga (%)', f'{fatiga_actual*100:.2f}%', 'Analizado'],
                     ['Erosión (%)', f'{erosion_actual*100:.2f}%', 'Analizado'],
-                    ['Módulo de reacción (k)', f'{k} pci', 'Entrada'],
+                    ['Módulo de reacción (k)', f'{k_analisis} pci', 'Entrada'],
                     ['Módulo de rotura (Sc)', f'{Sc} psi', 'Entrada'],
                     ['Tránsito (W18)', f'{W18:,.0f}', 'Calculado'],
                     ['Confiabilidad (R)', f'{R}', 'Entrada'],

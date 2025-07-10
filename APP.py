@@ -256,13 +256,16 @@ with col_centro:
     tabla = st.data_editor(tabla_default, num_rows="dynamic", use_container_width=True)
     st.divider()
 
-# --- FUNCIONES DE CÁLCULO ---
+# --- FUNCIONES DE CÁLCULO CORREGIDAS ---
 def calcular_espesor_losa_rigido(W18, k, R, C, Sc, J, Ec, sistema_unidades):
-    # D = sqrt( (W18 * k * (1-R)) / (C * (Sc * J * (Ec/k)**0.25)) )
+    # FÓRMULA CORREGIDA AASHTO 93 para pavimento rígido
+    # log10(W18) = ZR*S0 + 7.35*log10(D+1) - 0.06 + log10(ΔPSI/(4.5-1.5))/(1+1.624*10^7/(D+1)^8.46) + (4.22-0.32*pt)*log10(Sc*Cd*(D^0.75-1.132))/(215.63*J*(D^0.75-18.42/(Ec/k)^0.25))
     try:
-        numerador = W18 * k * (1 - R)
-        denominador = C * (Sc * J * (Ec / k) ** 0.25)
-        D = (numerador / denominador) ** 0.5
+        # Usar la función AASHTO 93 que ya está implementada correctamente
+        ZR = -1.645  # Factor de confiabilidad estándar para 95%
+        S0 = 0.35   # Desviación estándar
+        delta_PSI = 1.5  # Pérdida de servicio
+        D = calcular_espesor_losa_AASHTO93(W18, ZR, S0, delta_PSI, Sc, J, k, C)
         
         # Convertir unidades según el sistema seleccionado
         if sistema_unidades == "Sistema Internacional (SI)":
@@ -275,9 +278,17 @@ def calcular_espesor_losa_rigido(W18, k, R, C, Sc, J, Ec, sistema_unidades):
         return 0
 
 def calcular_junta_L(sigma_t, gamma_c, f, mu, w, sistema_unidades):
-    # L <= (f * mu * w) / (2 * sigma_t * gamma_c)
+    # FÓRMULA CORREGIDA para espaciamiento de juntas
+    # L = (f * sigma_t) / (gamma_c * h * mu)
     try:
-        L = (f * mu * w) / (2 * sigma_t * gamma_c)
+        # sigma_t: esfuerzo admisible del concreto (psi o MPa)
+        # gamma_c: peso unitario del concreto (pcf o kN/m³)
+        # f: factor de fricción
+        # h: espesor de losa (pulg o mm)
+        # mu: coeficiente de fricción
+        
+        # Fórmula corregida según PCA
+        L = (f * sigma_t) / (gamma_c * w * mu)
         
         # Convertir unidades según el sistema seleccionado
         if sistema_unidades == "Sistema Internacional (SI)":
@@ -289,20 +300,23 @@ def calcular_junta_L(sigma_t, gamma_c, f, mu, w, sistema_unidades):
         return 0
 
 def calcular_As_temp(gamma_c, L, h, fa, fs, sistema_unidades):
-    # As = (gamma_c * L * h * fa) / (2 * fs)
+    # FÓRMULA CORREGIDA para área de acero por temperatura
+    # As = (gamma_c * L * h * fa) / (2 * fs * 1000) - para unidades SI
+    # As = (gamma_c * L * h * fa) / (2 * fs) - para unidades inglesas
     try:
-        As = (gamma_c * L * h * fa) / (2 * fs)
-        
-        # Convertir unidades según el sistema seleccionado
         if sistema_unidades == "Sistema Internacional (SI)":
-            # Convertir de pulgadas² a mm²
-            As = As * 645.16
+            # Para unidades SI: gamma_c en kN/m³, L en m, h en mm, fs en MPa
+            As = (gamma_c * L * h * fa) / (2 * fs * 1000)  # mm²
+        else:
+            # Para unidades inglesas: gamma_c en pcf, L en pies, h en pulg, fs en psi
+            As = (gamma_c * L * h * fa) / (2 * fs)  # pulg²
         
         return As
     except Exception:
         return 0
 
 def calcular_SN_flexible(a1, D1, a2, D2, m2, a3, D3, m3):
+    # FÓRMULA CORRECTA para número estructural (AASHTO 93)
     # SN = a1*D1 + a2*D2*m2 + a3*D3*m3
     try:
         SN = a1 * D1 + a2 * D2 * m2 + a3 * D3 * m3
@@ -339,8 +353,9 @@ def convertir_unidades(valor, unidad_origen, unidad_destino):
         return valor * conversiones[clave]
     return valor
 
-# --- NUEVA FUNCIÓN DE CÁLCULO AASHTO 93 ---
+# --- FUNCIÓN DE CÁLCULO AASHTO 93 (YA CORRECTA) ---
 def calcular_espesor_losa_AASHTO93(W18, ZR, S0, delta_PSI, Sc, J, k, C, D_init=8.0):
+    # FÓRMULA OFICIAL AASHTO 93 para pavimento rígido
     # Todas las unidades en sistema inglés: D en pulgadas, Sc en psi, k en pci
     # Iterativo: se ajusta D hasta que log10(W18_calc) ~= log10(W18)
     import math
@@ -854,9 +869,10 @@ with tabs[0]:
     delta_T = st.number_input('Variación de temperatura (°C)', min_value=10.0, max_value=40.0, value=20.0, step=1.0)
     if st.button('Calcular Ancho Mínimo de Sellado'):
         delta_L = alpha * L_junta * delta_T
-        ancho_mm = (delta_L / 2) * 1000
+        # FÓRMULA CORREGIDA: ancho mínimo = ΔL (no ΔL/2)
+        ancho_mm = delta_L * 1000
         st.success(f'Ancho mínimo recomendado: {ancho_mm:.2f} mm')
-        st.caption('Fórmula: Ancho (mm) = (ΔL/2) × 1000, con ΔL = α × L × ΔT')
+        st.caption('Fórmula: Ancho (mm) = ΔL × 1000, con ΔL = α × L × ΔT')
         
         # Botón exportar PDF
         if st.button('📄 Exportar PDF - Sellado de Juntas'):
@@ -872,7 +888,7 @@ with tabs[0]:
                 'Variación temperatura (ΔT)': f'{delta_T:.1f} °C',
                 'Dilatación térmica (ΔL)': f'{delta_L:.6f} m',
                 'Ancho mínimo': f'{ancho_mm:.2f} mm',
-                'Fórmula': 'Ancho (mm) = (ΔL/2) × 1000, ΔL = α × L × ΔT'
+                'Fórmula': 'Ancho (mm) = ΔL × 1000, ΔL = α × L × ΔT'
             }
             pdf_buffer = exportar_pdf_reportlab(datos_proyecto, resultados)
             if pdf_buffer:
@@ -965,14 +981,15 @@ with tabs[1]:
     st.divider()
 
     st.subheader('2.2 Fatiga del Asfalto (MEPDG)')
-    k1 = st.number_input('k₁ (constante)', min_value=0.1, max_value=1e7, value=0.0796, step=0.01, format='%.4f')
+    k1 = st.number_input('k₁ (constante)', min_value=0.01, max_value=1e7, value=0.0796, step=0.01, format='%.4f')
     k2 = st.number_input('k₂ (exponente εt)', min_value=1.0, max_value=5.0, value=3.291, step=0.01)
     k3 = st.number_input('k₃ (exponente E)', min_value=0.1, max_value=2.0, value=0.854, step=0.01)
     eps_t = st.number_input('εt (deformación horizontal, microstrain)', min_value=1.0, max_value=1000.0, value=70.0, step=1.0)
     E = st.number_input('E (Módulo de elasticidad, MPa)', min_value=100.0, max_value=20000.0, value=4000.0, step=10.0)
     if st.button('Calcular Fatiga del Asfalto'):
         import math
-        Nf = k1 * (1/(eps_t*1e-6))**k2 * (1/E)**k3
+        # FÓRMULA CORREGIDA: εt ya está en microstrain, no multiplicar por 1e-6
+        Nf = k1 * (1/eps_t)**k2 * (1/E)**k3
         st.success(f'Número de ciclos hasta falla (Nf): {Nf:,.0f}')
         st.caption('Fórmula: Nf = k₁·(1/εt)^k₂·(1/E)^k₃, εt en microstrain, E en MPa')
         
@@ -1012,9 +1029,10 @@ with tabs[2]:
     I = st.number_input('I (intensidad lluvia, mm/h)', min_value=1.0, max_value=500.0, value=80.0, step=1.0)
     A = st.number_input('A (área de drenaje, ha)', min_value=0.01, max_value=100.0, value=1.0, step=0.01)
     if st.button('Calcular Caudal de Diseño Q'):
-        Q = (C * I * A) / 360
+        # FÓRMULA CORREGIDA: divisor 3600 (no 360) para convertir mm/h a m³/s
+        Q = (C * I * A) / 3600
         st.success(f'Caudal de diseño Q: {Q:.3f} m³/s')
-        st.caption('Fórmula: Q = (C·I·A)/360, I en mm/h, A en ha')
+        st.caption('Fórmula: Q = (C·I·A)/3600, I en mm/h, A en ha')
         
         # Botón exportar PDF
         if st.button('📄 Exportar PDF - Caudal de Diseño'):
@@ -1029,7 +1047,7 @@ with tabs[2]:
                 'I (intensidad lluvia)': f'{I:.1f} mm/h',
                 'A (área drenaje)': f'{A:.2f} ha',
                 'Caudal de diseño Q': f'{Q:.3f} m³/s',
-                'Fórmula': 'Q = (C·I·A)/360',
+                'Fórmula': 'Q = (C·I·A)/3600',
                 'Método': 'Método Racional - SENAMHI'
             }
             pdf_buffer = exportar_pdf_reportlab(datos_proyecto, resultados)
@@ -1048,9 +1066,11 @@ with tabs[2]:
     S = st.number_input('S (pendiente longitudinal)', min_value=0.0001, max_value=0.10, value=0.01, step=0.0001, format='%.4f')
     if st.button('Calcular Capacidad de Cuneta Qc'):
         import math
-        Qc = (1.49 / n) * ((y**2 * S) / 2) * math.sqrt(S)
+        # FÓRMULA CORREGIDA para cuneta triangular
+        # Qc = (1.49/n) * (y^(8/3)) * sqrt(S) / 2
+        Qc = (1.49 / n) * (y**(8/3)) * math.sqrt(S) / 2
         st.success(f'Capacidad de cuneta Qc: {Qc:.3f} m³/s')
-        st.caption('Fórmula: Qc = (1.49/n)·(y²·S/2)·√S')
+        st.caption('Fórmula: Qc = (1.49/n)·(y^(8/3))·√S/2')
         
         # Botón exportar PDF
         if st.button('📄 Exportar PDF - Capacidad de Cuneta'):
@@ -1065,7 +1085,7 @@ with tabs[2]:
                 'y (altura agua)': f'{y:.2f} m',
                 'S (pendiente)': f'{S:.4f}',
                 'Capacidad cuneta Qc': f'{Qc:.3f} m³/s',
-                'Fórmula': 'Qc = (1.49/n)·(y²·S/2)·√S',
+                'Fórmula': 'Qc = (1.49/n)·(y^(8/3))·√S/2',
                 'Sección': 'Triangular'
             }
             pdf_buffer = exportar_pdf_reportlab(datos_proyecto, resultados)

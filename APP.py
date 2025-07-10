@@ -215,7 +215,7 @@ with col_der:
         # st.markdown(f"**Número estructural (SN):** <span style='color:#388E3C'>{SN:.2f}</span>", unsafe_allow_html=True)
 
     # --- ANÁLISIS DE SENSIBILIDAD Y GRÁFICOS ---
-    sensibilidad = st.button("📊 Análisis de sensibilidad", use_container_width=True)
+    sensibilidad = st.button("📊 Análisis de sensibilidad", use_container_width=True, key="btn_sensibilidad")
     if sensibilidad:
         # Parámetros base
         W18 = sum(tabla['Repeticiones']) if 'Repeticiones' in tabla else 100000
@@ -331,56 +331,25 @@ with col_der:
         
         st.dataframe(sensibilidad_df, use_container_width=True)
         
-        # Exportación
+        # Exportación solo PDF
         st.markdown("### 📤 Exportar Resultados")
         
-        col_exp1, col_exp2 = st.columns(2)
+        # Exportar gráfico a PDF
+        if st.button("📄 Exportar Gráfico a PDF", key="btn_export_pdf"):
+            # Guardar figura en buffer
+            pdf_buffer = BytesIO()
+            fig_combined.savefig(pdf_buffer, format='pdf', bbox_inches='tight', dpi=300)
+            pdf_buffer.seek(0)
+            
+            st.download_button(
+                label="📥 Descargar PDF",
+                data=pdf_buffer.getvalue(),
+                file_name=f"graficos_sensibilidad_{proyecto}.pdf",
+                mime="application/pdf",
+                key="btn_download_pdf"
+            )
         
-        with col_exp1:
-            # Exportar a Excel
-            if st.button("📊 Exportar a Excel"):
-                # Crear DataFrame con todos los datos
-                excel_data = pd.DataFrame({
-                    'k (pci)': k_range,
-                    'D vs k (pulg)': D_k,
-                    'Sc (psi)': Sc_range,
-                    'D vs Sc (pulg)': D_Sc,
-                    'W18': W18_range,
-                    'D vs W18 (pulg)': D_W18,
-                    'R': R_range,
-                    'D vs R (pulg)': D_R
-                })
-                
-                # Guardar en buffer
-                buffer = BytesIO()
-                with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                    excel_data.to_excel(writer, sheet_name='Sensibilidad', index=False)
-                    sensibilidad_df.to_excel(writer, sheet_name='Recomendaciones', index=False)
-                
-                buffer.seek(0)
-                st.download_button(
-                    label="📥 Descargar Excel",
-                    data=buffer.getvalue(),
-                    file_name=f"analisis_sensibilidad_{proyecto}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-        
-        with col_exp2:
-            # Exportar gráfico a PDF
-            if st.button("📄 Exportar Gráfico a PDF"):
-                # Guardar figura en buffer
-                pdf_buffer = BytesIO()
-                fig_combined.savefig(pdf_buffer, format='pdf', bbox_inches='tight', dpi=300)
-                pdf_buffer.seek(0)
-                
-                st.download_button(
-                    label="📥 Descargar PDF",
-                    data=pdf_buffer.getvalue(),
-                    file_name=f"graficos_sensibilidad_{proyecto}.pdf",
-                    mime="application/pdf"
-                )
-        
-        st.success("✅ Análisis de sensibilidad completado con gráficos, recomendaciones y opciones de exportación.")
+        st.success("✅ Análisis de sensibilidad completado con gráficos, recomendaciones y opción de exportación.")
 
     else:
         st.markdown("**Espesor de losa :**  ", help="mm/in")
@@ -398,19 +367,19 @@ with col_der:
         st.markdown("Separación entre barras:  ")
         st.markdown("Diámetro de barras:  ")
         st.divider()
-        st.button("📊 Análisis de sensibilidad", use_container_width=True)
+        st.button("📊 Análisis de sensibilidad", use_container_width=True, key="btn_sensibilidad_else")
         st.divider()
         col_btn1, col_btn2, col_btn3, col_btn4 = st.columns(4)
         with col_btn1:
-            st.button("💾 Guardar")
+            st.button("💾 Guardar", key="btn_guardar")
         with col_btn2:
-            st.button("📂 Abrir")
+            st.button("📂 Abrir", key="btn_abrir")
         with col_btn3:
-            st.button("📝 TXT")
+            st.button("📝 TXT", key="btn_txt")
         with col_btn4:
-            st.button("❌ Salir")
+            st.button("❌ Salir", key="btn_salir")
         st.divider()
         st.markdown("Sistema de unidades :   ", help="SI / Inglés")
-        st.radio("", ["SI", "Inglés"], horizontal=True, index=0)
+        st.radio("", ["SI", "Inglés"], horizontal=True, index=0, key="radio_unidades")
         st.divider()
         st.success("Resultados y gráficos aparecerán aquí tras el cálculo.")

@@ -78,10 +78,17 @@ Bienvenido al sistema profesional de diseño de pavimentos. Complete los datos d
 > **Tip:** Puede editar la tabla de tránsito y cambiar unidades en la parte inferior derecha.
 """)
 
-# Sistema de unidades
-st.markdown("### 🔧 Sistema de Unidades")
-sistema_unidades = st.radio("Seleccione el sistema de unidades:", ["Sistema Internacional (SI)", "Sistema Inglés"], 
-                           horizontal=True, key="sistema_unidades")
+# --- SISTEMA DE UNIDADES ---
+sistema_unidades = st.radio(
+    "Sistema de unidades:",
+    ["SI (Internacional)", "Inglés"],
+    horizontal=True,
+    key="sistema_unidades_selector"
+)
+if sistema_unidades == "SI (Internacional)":
+    sistema_unidades = "Sistema Internacional (SI)"
+else:
+    sistema_unidades = "Sistema Inglés"
 
 # Panel principal con 3 columnas
 col_izq, col_centro, col_der = st.columns([1.2, 1.1, 1.2])
@@ -647,8 +654,5 @@ with col_der:
         st.markdown("Longitud:  ")
         st.markdown("Separación entre barras:  ")
         st.markdown("Diámetro de barras:  ")
-        st.divider()
-        st.markdown("Sistema de unidades :   ", help="SI / Inglés")
-        st.radio("", ["SI", "Inglés"], horizontal=True, index=0, key="radio_unidades")
         st.divider()
         st.success("Resultados y gráficos aparecerán aquí tras el cálculo.")

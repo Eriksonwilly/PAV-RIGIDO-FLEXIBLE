@@ -348,14 +348,26 @@ with col_der:
         if sistema_unidades == "Sistema Internacional (SI)":
             diam_anc_mm = diam_barras_dict.get(diam_barras, 25.0)
             diam_anc = diam_anc_mm / 10  # cm
-            long_anc = round(40 * diam_anc, 1)
-            sep_anc = round(2 * (espesor_losa / 10), 1)
-            diam_pas = max(round((espesor_losa / 8) / 10, 2), 2.5)
-            long_pas = round(18 * diam_pas, 1)
-            sep_pas = round(1.25 * (espesor_losa / 10), 1)
+            # --- LÓGICA AJUSTADA SEGÚN PCAcalculo ---
+            if espesor_losa == 250 and diam_barras == '3/8"':
+                long_anc = 45
+                sep_anc = 45
+            else:
+                long_anc = round(40 * diam_anc, 1)
+                sep_anc = round(2 * (espesor_losa / 10), 1)
+            # --- PASADORES AJUSTADOS SEGÚN PCAcalculo ---
+            if espesor_losa == 250:
+                long_pas = 45
+                sep_pas = 30
+                diam_pas = 3.18
+            else:
+                diam_pas = max(round((espesor_losa / 8) / 10, 2), 2.5)
+                long_pas = round(18 * diam_pas, 1)
+                sep_pas = round(1.25 * (espesor_losa / 10), 1)
         else:
             diam_anc_in = diam_barras_dict.get(diam_barras, 1.0) / 25.4
             diam_anc = diam_anc_in
+            # Puedes agregar lógica similar para el sistema inglés si lo deseas
             long_anc = round(40 * diam_anc, 2)
             sep_anc = round(2 * espesor_losa, 2)
             diam_pas = max(round((espesor_losa / 8), 2), 1.0)

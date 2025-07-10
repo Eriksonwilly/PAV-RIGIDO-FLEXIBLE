@@ -145,11 +145,16 @@ with col_centro:
     with st.container():
         factor_seg = st.selectbox("Factor de seguridad", [1.0, 1.1, 1.2, 1.3, 1.4], index=2)
         tipo_ejes = st.selectbox("Tipo de Ejes", ["Ejes Simples", "Ejes Tándem"])
-    st.markdown("##### <span style='color:#388E3C'>Tabla de Tránsito</span>", unsafe_allow_html=True)
-    st.caption("Carga (kN/kips) y repeticiones")
+    # Unidad de carga dinámica según sistema de unidades
+    if sistema_unidades == "Sistema Internacional (SI)":
+        unidad_carga = "kN"
+    else:
+        unidad_carga = "kips"
+    st.markdown(f"##### <span style='color:#388E3C'>Tabla de Tránsito</span>", unsafe_allow_html=True)
+    st.caption(f"Carga ({unidad_carga}) y repeticiones")
     tabla_default = {
-        "Carga": [52, 48, 44, 36, 32, 28, 24, 20, 16],
-        "Repeticiones": [21320, 42810, 124900, 372900, 885800, 930700, 1656000, 984900, 1356000]
+        "Carga": [134, 125, 116, 107, 98, 89, 80, 71, 62] if sistema_unidades == "Sistema Internacional (SI)" else [30.1, 28.1, 26.1, 24.1, 22.1, 20.1, 18.1, 16.1, 14.1],
+        "Repeticiones": [6310, 14690, 30140, 106900, 233500, 422500, 586900, 1837000, 0]
     }
     tabla = st.data_editor(tabla_default, num_rows="dynamic", use_container_width=True)
     st.divider()

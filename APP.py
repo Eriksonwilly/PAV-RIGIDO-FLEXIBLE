@@ -714,3 +714,147 @@ with col_der:
         st.markdown(f"<span style='color:red'><b>Porcentaje de erosión</b></span>: {porcentaje_erosion:.2f}", unsafe_allow_html=True)
         st.divider()
         st.success("Resultados y gráficos aparecerán aquí tras el cálculo.")
+
+# --- ESTRUCTURA DE PESTAÑAS PRINCIPALES ---
+tabs = st.tabs([
+    'Pavimento Rígido',
+    'Pavimento Flexible',
+    'Veredas y Cunetas',
+    'Drenaje',
+    'Normativas Locales'
+])
+
+# --- PAVIMENTO RÍGIDO ---
+with tabs[0]:
+    st.header('Pavimento Rígido')
+    st.subheader('1.1 Espaciamiento de Juntas Transversales (PCA)')
+    espesor_losa_m = st.number_input('Espesor de losa (m)', min_value=0.10, max_value=0.40, value=0.15, step=0.01, format='%.2f')
+    if st.button('Calcular Espaciamiento de Juntas'):
+        espaciamiento = 24 * espesor_losa_m
+        st.success(f'Espaciamiento recomendado: {espaciamiento:.2f} m')
+    st.caption('Fórmula: Espaciamiento = 24 × espesor de losa (m)')
+    st.divider()
+
+    st.subheader('1.2 Sellado de Juntas (Ancho Mínimo)')
+    alpha = st.number_input('Coef. dilatación del concreto α (1/°C)', min_value=8e-6, max_value=14e-6, value=10e-6, step=1e-6, format='%.1e')
+    L_junta = st.number_input('Longitud entre juntas (m)', min_value=1.0, max_value=10.0, value=4.0, step=0.1)
+    delta_T = st.number_input('Variación de temperatura (°C)', min_value=10.0, max_value=40.0, value=20.0, step=1.0)
+    if st.button('Calcular Ancho Mínimo de Sellado'):
+        delta_L = alpha * L_junta * delta_T
+        ancho_mm = (delta_L / 2) * 1000
+        st.success(f'Ancho mínimo recomendado: {ancho_mm:.2f} mm')
+    st.caption('Fórmula: Ancho (mm) = (ΔL/2) × 1000, con ΔL = α × L × ΔT')
+    st.divider()
+
+    st.subheader('1.3 Dosis de Fibras de Acero')
+    resistencia_requerida = st.number_input('Resistencia requerida (MPa)', min_value=1.0, max_value=10.0, value=4.0, step=0.1)
+    eficiencia_fibra = st.number_input('Eficiencia de la fibra (MPa/kg)', min_value=0.01, max_value=1.0, value=0.13, step=0.01)
+    if st.button('Calcular Dosis de Fibras de Acero'):
+        dosis = resistencia_requerida / eficiencia_fibra
+        st.success(f'Dosis recomendada: {dosis:.2f} kg/m³')
+    st.caption('Fórmula: Dosis = Resistencia requerida / Eficiencia de la fibra')
+    st.divider()
+
+# --- PAVIMENTO FLEXIBLE ---
+with tabs[1]:
+    st.header('Pavimento Flexible')
+    st.subheader('2.1 Número Estructural SN (AASHTO 93)')
+    a1 = st.number_input('a₁ (coef. capa asfáltica)', min_value=0.1, max_value=1.0, value=0.44, step=0.01)
+    D1 = st.number_input('D₁ (espesor asfalto, pulg)', min_value=1.0, max_value=12.0, value=4.0, step=0.1)
+    a2 = st.number_input('a₂ (coef. base)', min_value=0.05, max_value=0.5, value=0.14, step=0.01)
+    D2 = st.number_input('D₂ (espesor base, pulg)', min_value=1.0, max_value=20.0, value=8.0, step=0.1)
+    m2 = st.number_input('m₂ (factor drenaje base)', min_value=0.5, max_value=1.5, value=1.0, step=0.01)
+    a3 = st.number_input('a₃ (coef. subbase)', min_value=0.01, max_value=0.3, value=0.11, step=0.01)
+    D3 = st.number_input('D₃ (espesor subbase, pulg)', min_value=1.0, max_value=20.0, value=6.0, step=0.1)
+    m3 = st.number_input('m₃ (factor drenaje subbase)', min_value=0.5, max_value=1.5, value=1.0, step=0.01)
+    if st.button('Calcular Número Estructural SN'):
+        SN = a1*D1 + a2*D2*m2 + a3*D3*m3
+        st.success(f'Número estructural SN: {SN:.2f}')
+    st.caption('Fórmula: SN = a₁·D₁ + a₂·D₂·m₂ + a₃·D₃·m₃')
+    st.divider()
+
+    st.subheader('2.2 Fatiga del Asfalto (MEPDG)')
+    k1 = st.number_input('k₁ (constante)', min_value=0.1, max_value=1e7, value=0.0796, step=0.01, format='%.4f')
+    k2 = st.number_input('k₂ (exponente εt)', min_value=1.0, max_value=5.0, value=3.291, step=0.01)
+    k3 = st.number_input('k₃ (exponente E)', min_value=0.1, max_value=2.0, value=0.854, step=0.01)
+    eps_t = st.number_input('εt (deformación horizontal, microstrain)', min_value=1.0, max_value=1000.0, value=70.0, step=1.0)
+    E = st.number_input('E (Módulo de elasticidad, MPa)', min_value=100.0, max_value=20000.0, value=4000.0, step=10.0)
+    if st.button('Calcular Fatiga del Asfalto'):
+        import math
+        Nf = k1 * (1/(eps_t*1e-6))**k2 * (1/E)**k3
+        st.success(f'Número de ciclos hasta falla (Nf): {Nf:,.0f}')
+    st.caption('Fórmula: Nf = k₁·(1/εt)^k₂·(1/E)^k₃, εt en microstrain, E en MPa')
+    st.divider()
+
+# --- VEREDAS Y CUNETAS ---
+with tabs[2]:
+    st.header('Veredas y Cunetas')
+    st.subheader('3.1 Caudal de Diseño Q (Método Racional)')
+    C = st.number_input('C (coef. escorrentía)', min_value=0.1, max_value=1.0, value=0.9, step=0.01)
+    I = st.number_input('I (intensidad lluvia, mm/h)', min_value=1.0, max_value=500.0, value=80.0, step=1.0)
+    A = st.number_input('A (área de drenaje, ha)', min_value=0.01, max_value=100.0, value=1.0, step=0.01)
+    if st.button('Calcular Caudal de Diseño Q'):
+        Q = (C * I * A) / 360
+        st.success(f'Caudal de diseño Q: {Q:.3f} m³/s')
+    st.caption('Fórmula: Q = (C·I·A)/360, I en mm/h, A en ha')
+    st.divider()
+
+    st.subheader('3.2 Capacidad de Cuneta Triangular (Manning)')
+    n = st.number_input('n (rugosidad de Manning)', min_value=0.010, max_value=0.050, value=0.016, step=0.001)
+    y = st.number_input('y (altura de agua, m)', min_value=0.01, max_value=2.0, value=0.20, step=0.01)
+    S = st.number_input('S (pendiente longitudinal)', min_value=0.0001, max_value=0.10, value=0.01, step=0.0001, format='%.4f')
+    if st.button('Calcular Capacidad de Cuneta Qc'):
+        import math
+        Qc = (1.49 / n) * ((y**2 * S) / 2) * math.sqrt(S)
+        st.success(f'Capacidad de cuneta Qc: {Qc:.3f} m³/s')
+    st.caption('Fórmula: Qc = (1.49/n)·(y²·S/2)·√S')
+    st.divider()
+
+    st.subheader('3.3 Accesibilidad: Pendiente de Rampas (RNE)')
+    pendiente = st.number_input('Pendiente (%)', min_value=1.0, max_value=20.0, value=8.0, step=0.1)
+    longitud = st.number_input('Longitud de rampa (m)', min_value=0.5, max_value=10.0, value=2.0, step=0.1)
+    if st.button('Validar Pendiente de Rampa'):
+        if pendiente <= 12 and longitud <= 3:
+            st.success('Cumple con RNE: Pendiente y longitud dentro de los límites.')
+        elif pendiente > 12:
+            st.error('No cumple: Pendiente supera el 12% permitido por RNE.')
+        elif longitud > 3:
+            st.error('No cumple: Longitud supera el máximo de 3 m permitido por RNE.')
+    st.caption('Requisito: Pendiente ≤ 12%, longitud máxima 3 m (RNE)')
+    st.divider()
+
+# --- DRENAJE ---
+with tabs[3]:
+    st.header('Drenaje')
+    st.subheader('4.1 Diámetro Mínimo de Alcantarilla (MTC)')
+    Q_dren = st.number_input('Q (caudal, m³/s)', min_value=0.001, max_value=10.0, value=0.5, step=0.001, format='%.3f')
+    v_dren = st.number_input('v (velocidad mínima, m/s)', min_value=0.1, max_value=10.0, value=0.6, step=0.01)
+    if st.button('Calcular Diámetro Mínimo de Alcantarilla'):
+        import math
+        D = math.sqrt(4 * Q_dren / (math.pi * v_dren))
+        st.success(f'Diámetro mínimo recomendado: {D:.3f} m')
+    st.caption('Fórmula: D = sqrt(4Q/(πv)), Q en m³/s, v en m/s')
+    st.divider()
+
+# --- NORMATIVAS LOCALES ---
+with tabs[4]:
+    st.header('Normativas Locales')
+    st.subheader('5.1 Correlación K vs CBR (MTC)')
+    CBR = st.number_input('CBR (%)', min_value=1.0, max_value=50.0, value=5.0, step=0.1)
+    if st.button('Calcular K (Módulo de reacción)'):
+        K = 10 * CBR
+        st.success(f'Módulo de reacción K: {K:.1f} MPa/m')
+    st.caption('Fórmula: K = 10 × CBR (MTC). CBR ≤ 50')
+    st.divider()
+
+    st.subheader('5.2 Ajuste de Resistencia de Concreto f’c por Altitud')
+    fc = st.number_input('f’c (resistencia, MPa)', min_value=10.0, max_value=60.0, value=28.0, step=0.1)
+    altitud = st.number_input('Altitud (msnm)', min_value=0, max_value=5000, value=3800, step=10)
+    if st.button('Calcular f’c Ajustado por Altitud'):
+        if altitud > 3800:
+            fc_ajustado = fc + 5
+            st.success(f"f’c ajustado: {fc_ajustado:.1f} MPa (se suma 5 MPa por altitud > 3800 msnm)")
+        else:
+            st.info(f"f’c no requiere ajuste: {fc:.1f} MPa (altitud ≤ 3800 msnm)")
+    st.caption('Fórmula: f’c_ajustado = f’c + 5 MPa para altitud > 3800 msnm (MTC)')
+    st.divider()

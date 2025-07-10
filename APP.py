@@ -284,12 +284,16 @@ with col_der:
             unidad_area = "mm²"
             unidad_modulo = "MPa"
             unidad_k = "MPa/m"
+            unidad_cm = "cm"
+            unidad_diam = "cm"
         else:
             unidad_espesor = "pulg"
             unidad_longitud = "pies"
             unidad_area = "pulg²"
             unidad_modulo = "psi"
             unidad_k = "pci"
+            unidad_cm = "in"
+            unidad_diam = "in"
         
         st.markdown(f"**Espesor de losa calculado (D):** <span style='color:#1976D2;font-size:20px'><b>{D:.2f} {unidad_espesor}</b></span>", unsafe_allow_html=True)
         st.markdown(f"**Junta máxima (L):** <span style='color:#1976D2'>{L_junta:.2f} {unidad_longitud}</span>", unsafe_allow_html=True)
@@ -301,6 +305,63 @@ with col_der:
         st.markdown(f"**Coef. transferencia (J):** {J}")
         st.markdown(f"**Coef. drenaje (C):** {C}")
         st.markdown(f"**Confiabilidad (R):** {R}")
+        st.divider()
+
+        # Porcentaje de fatiga y erosión calculados automáticamente
+        # Fórmulas simplificadas estándar (puedes ajustar según normativa)
+        # Fatiga: función de W18, D, Sc
+        if sistema_unidades == "Sistema Internacional (SI)":
+            # Convertir D a pulgadas y Sc a psi para la fórmula estándar
+            D_fatiga = D / 25.4
+            Sc_fatiga = Sc * 145.038
+        else:
+            D_fatiga = D
+            Sc_fatiga = Sc
+        # Fórmula simplificada de fatiga (ejemplo):
+        porcentaje_fatiga = 100 * (W18 / (10**7)) * (D_fatiga / Sc_fatiga) ** 3.42
+        # Fórmula simplificada de erosión (ejemplo):
+        if sistema_unidades == "Sistema Internacional (SI)":
+            k_erosion = k * 3.6839  # MPa/m a pci
+        else:
+            k_erosion = k
+        porcentaje_erosion = 100 * (W18 / (10**6)) * (D_fatiga / k_erosion) ** 7.35
+        st.markdown(f"<span style='color:red'><b>Porcentaje de fatiga</b></span>: {porcentaje_fatiga:.2f}", unsafe_allow_html=True)
+        st.markdown(f"<span style='color:red'><b>Porcentaje de erosión</b></span>: {porcentaje_erosion:.2f}", unsafe_allow_html=True)
+        st.divider()
+
+        # --- CÁLCULO RECOMENDACIONES BARRAS Y PASADORES (AASHTO/PERU) ---
+        # Diámetro de barra seleccionado (en mm o in)
+        diam_barras_dict = {"3/8\"": 9.5, "1/2\"": 12.7, "5/8\"": 15.9, "3/4\"": 19.1}  # mm
+        if sistema_unidades == "Sistema Internacional (SI)":
+            diam_anc_mm = diam_barras_dict.get(diam_barras, 25.0)
+            diam_anc = diam_anc_mm / 10  # cm
+            # Barras de anclaje
+            long_anc = round(40 * diam_anc, 1)  # Longitud = 40*diametro (cm)
+            sep_anc = round(2 * (D / 10), 1)    # Separación = 2*espesor_losa (cm)
+            # Pasadores
+            diam_pas = max(round((D / 8) / 10, 2), 2.5)  # Diámetro = 1/8 espesor (cm), mínimo 2.5cm
+            long_pas = round(18 * diam_pas, 1)  # Longitud = 18*diametro (cm)
+            sep_pas = round(1.25 * (D / 10), 1) # Separación = 1.25*espesor_losa (cm)
+        else:
+            diam_anc_in = diam_barras_dict.get(diam_barras, 1.0) / 25.4  # in
+            diam_anc = diam_anc_in
+            # Barras de anclaje
+            long_anc = round(40 * diam_anc, 2)  # Longitud = 40*diametro (in)
+            sep_anc = round(2 * D, 2)           # Separación = 2*espesor_losa (in)
+            # Pasadores
+            diam_pas = max(round((D / 8), 2), 1.0)  # Diámetro = 1/8 espesor (in), mínimo 1 in
+            long_pas = round(18 * diam_pas, 2)      # Longitud = 18*diametro (in)
+            sep_pas = round(1.25 * D, 2)            # Separación = 1.25*espesor_losa (in)
+        
+        # Mostrar recomendaciones
+        st.markdown("**Recomendación para barras de anclaje:**")
+        st.markdown(f"Longitud: <span style='color:#1976D2'>{long_anc} {unidad_cm}</span>", unsafe_allow_html=True)
+        st.markdown(f"Separación entre barras: <span style='color:#1976D2'>{sep_anc} {unidad_cm}</span>", unsafe_allow_html=True)
+        st.markdown(f"Diámetro de barras: <span style='color:#1976D2'>{diam_anc:.2f} {unidad_cm}</span>", unsafe_allow_html=True)
+        st.markdown("**Recomendación para pasadores (fy=60 ksi):**")
+        st.markdown(f"Longitud: <span style='color:#1976D2'>{long_pas} {unidad_cm}</span>", unsafe_allow_html=True)
+        st.markdown(f"Separación entre barras: <span style='color:#1976D2'>{sep_pas} {unidad_cm}</span>", unsafe_allow_html=True)
+        st.markdown(f"Diámetro de barras: <span style='color:#1976D2'>{diam_pas:.2f} {unidad_cm}</span>", unsafe_allow_html=True)
         st.divider()
 
         # --- CÁLCULO PAVIMENTO FLEXIBLE (opcional, si tienes panel) ---

@@ -331,23 +331,108 @@ with col_der:
         
         st.dataframe(sensibilidad_df, use_container_width=True)
         
-        # Exportación solo PDF
-        st.markdown("### 📤 Exportar Resultados")
+        # Exportación PDF mejorada
+        st.markdown("### 📤 Exportar Resultados Completos")
         
-        # Exportar gráfico a PDF
-        if st.button("📄 Exportar Gráfico a PDF", key="btn_export_pdf"):
-            # Guardar figura en buffer
-            pdf_buffer = BytesIO()
-            fig_combined.savefig(pdf_buffer, format='pdf', bbox_inches='tight', dpi=300)
-            pdf_buffer.seek(0)
-            
-            st.download_button(
-                label="📥 Descargar PDF",
-                data=pdf_buffer.getvalue(),
-                file_name=f"graficos_sensibilidad_{proyecto}.pdf",
-                mime="application/pdf",
-                key="btn_download_pdf"
-            )
+        # Crear PDF con todos los resultados
+        if st.button("📄 Generar Reporte PDF Completo", key="btn_export_pdf"):
+            try:
+                # Crear figura con todos los resultados
+                fig_report = plt.figure(figsize=(16, 20))
+                
+                # Subplot 1: Gráficos de sensibilidad
+                plt.subplot(4, 2, 1)
+                plt.plot(k_range, D_k, color='blue', linewidth=2)
+                plt.axvline(x=k, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {k}')
+                plt.title('Espesor vs Módulo de reacción (k)', fontsize=10, fontweight='bold')
+                plt.xlabel('k (pci)')
+                plt.ylabel('D (pulg)')
+                plt.grid(True, alpha=0.3)
+                plt.legend()
+                
+                plt.subplot(4, 2, 2)
+                plt.plot(Sc_range, D_Sc, color='green', linewidth=2)
+                plt.axvline(x=Sc, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {Sc}')
+                plt.title('Espesor vs Módulo de rotura (Sc)', fontsize=10, fontweight='bold')
+                plt.xlabel('Sc (psi)')
+                plt.ylabel('D (pulg)')
+                plt.grid(True, alpha=0.3)
+                plt.legend()
+                
+                plt.subplot(4, 2, 3)
+                plt.plot(W18_range, D_W18, color='orange', linewidth=2)
+                plt.axvline(x=W18, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {W18:,.0f}')
+                plt.title('Espesor vs Tránsito (W18)', fontsize=10, fontweight='bold')
+                plt.xlabel('W18')
+                plt.ylabel('D (pulg)')
+                plt.grid(True, alpha=0.3)
+                plt.legend()
+                
+                plt.subplot(4, 2, 4)
+                plt.plot(R_range, D_R, color='purple', linewidth=2)
+                plt.axvline(x=R, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {R}')
+                plt.title('Espesor vs Confiabilidad (R)', fontsize=10, fontweight='bold')
+                plt.xlabel('R')
+                plt.ylabel('D (pulg)')
+                plt.grid(True, alpha=0.3)
+                plt.legend()
+                
+                # Subplot 5: Tabla de resultados
+                plt.subplot(4, 2, (5, 6))
+                plt.axis('off')
+                table_data = [
+                    ['Parámetro', 'Valor Actual', 'Resultado'],
+                    ['Espesor de losa (D)', f'{D_actual:.2f} pulg', 'Calculado'],
+                    ['Fatiga (%)', f'{fatiga_actual*100:.2f}%', 'Analizado'],
+                    ['Erosión (%)', f'{erosion_actual*100:.2f}%', 'Analizado'],
+                    ['Módulo de reacción (k)', f'{k} pci', 'Entrada'],
+                    ['Módulo de rotura (Sc)', f'{Sc} psi', 'Entrada'],
+                    ['Tránsito (W18)', f'{W18:,.0f}', 'Calculado'],
+                    ['Confiabilidad (R)', f'{R}', 'Entrada']
+                ]
+                table = plt.table(cellText=table_data[1:], colLabels=table_data[0], 
+                                cellLoc='center', loc='center', colWidths=[0.3, 0.3, 0.2])
+                table.auto_set_font_size(False)
+                table.set_fontsize(9)
+                table.scale(1, 2)
+                plt.title('Resultados del Análisis', fontsize=12, fontweight='bold', pad=20)
+                
+                # Subplot 6: Tabla de sensibilidad
+                plt.subplot(4, 2, (7, 8))
+                plt.axis('off')
+                sens_table_data = [
+                    ['Parámetro', 'Sensibilidad', 'Impacto'],
+                    ['Módulo de reacción (k)', f'{sens_k:.3f}', 'Alto' if sens_k > 0.5 else 'Medio' if sens_k > 0.2 else 'Bajo'],
+                    ['Módulo de rotura (Sc)', f'{sens_Sc:.3f}', 'Alto' if sens_Sc > 0.5 else 'Medio' if sens_Sc > 0.2 else 'Bajo'],
+                    ['Tránsito (W18)', f'{sens_W18:.3f}', 'Alto' if sens_W18 > 0.5 else 'Medio' if sens_W18 > 0.2 else 'Bajo']
+                ]
+                sens_table = plt.table(cellText=sens_table_data[1:], colLabels=sens_table_data[0], 
+                                     cellLoc='center', loc='center', colWidths=[0.4, 0.3, 0.2])
+                sens_table.auto_set_font_size(False)
+                sens_table.set_fontsize(9)
+                sens_table.scale(1, 2)
+                plt.title('Análisis de Sensibilidad', fontsize=12, fontweight='bold', pad=20)
+                
+                plt.tight_layout()
+                
+                # Guardar PDF
+                pdf_buffer = BytesIO()
+                fig_report.savefig(pdf_buffer, format='pdf', bbox_inches='tight', dpi=300)
+                pdf_buffer.seek(0)
+                
+                # Botón de descarga
+                st.download_button(
+                    label="📥 Descargar Reporte PDF Completo",
+                    data=pdf_buffer.getvalue(),
+                    file_name=f"reporte_pavimento_{proyecto}.pdf",
+                    mime="application/pdf",
+                    key="btn_download_pdf"
+                )
+                
+                st.success("✅ Reporte PDF generado exitosamente con todos los resultados y gráficos.")
+                
+            except Exception as e:
+                st.error(f"❌ Error al generar PDF: {str(e)}")
         
         st.success("✅ Análisis de sensibilidad completado con gráficos, recomendaciones y opción de exportación.")
 
@@ -366,18 +451,6 @@ with col_der:
         st.markdown("Longitud:  ")
         st.markdown("Separación entre barras:  ")
         st.markdown("Diámetro de barras:  ")
-        st.divider()
-        st.button("📊 Análisis de sensibilidad", use_container_width=True, key="btn_sensibilidad_else")
-        st.divider()
-        col_btn1, col_btn2, col_btn3, col_btn4 = st.columns(4)
-        with col_btn1:
-            st.button("💾 Guardar", key="btn_guardar")
-        with col_btn2:
-            st.button("📂 Abrir", key="btn_abrir")
-        with col_btn3:
-            st.button("📝 TXT", key="btn_txt")
-        with col_btn4:
-            st.button("❌ Salir", key="btn_salir")
         st.divider()
         st.markdown("Sistema de unidades :   ", help="SI / Inglés")
         st.radio("", ["SI", "Inglés"], horizontal=True, index=0, key="radio_unidades")

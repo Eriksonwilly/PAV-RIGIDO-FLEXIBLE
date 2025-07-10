@@ -658,13 +658,4 @@ with col_der:
         st.markdown(f"<span style='color:red'><b>Porcentaje de fatiga</b></span>: {porcentaje_fatiga:.2f}", unsafe_allow_html=True)
         st.markdown(f"<span style='color:red'><b>Porcentaje de erosión</b></span>: {porcentaje_erosion:.2f}", unsafe_allow_html=True)
         st.divider()
-        # Recomendaciones fijas como en la imagen
-        st.markdown("**Recomendación para barras de anclaje:**")
-        st.markdown(f"Longitud: <span style='color:#1976D2'>45 cm</span>", unsafe_allow_html=True)
-        st.markdown(f"Separación entre barras: <span style='color:#1976D2'>45 cm</span>", unsafe_allow_html=True)
-        st.markdown("**Recomendación para pasadores (fy=60 ksi):**")
-        st.markdown(f"Longitud: <span style='color:#1976D2'>45 cm</span>", unsafe_allow_html=True)
-        st.markdown(f"Separación entre barras: <span style='color:#1976D2'>30 cm</span>", unsafe_allow_html=True)
-        st.markdown(f"Diámetro de barras: <span style='color:#1976D2'>3.18 cm</span>", unsafe_allow_html=True)
-        st.divider()
         st.success("Resultados y gráficos aparecerán aquí tras el cálculo.")

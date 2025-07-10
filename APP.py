@@ -708,9 +708,8 @@ with col_der:
         # Verificar si matplotlib está disponible
         if not MATPLOTLIB_AVAILABLE:
             st.error("⚠️ Matplotlib no está disponible. No se puede generar el análisis de sensibilidad.")
-            return
-        
-        try:
+        else:
+            try:
             import matplotlib
             matplotlib.use('Agg')  # Backend no interactivo para Streamlit
             import matplotlib.pyplot as plt
@@ -844,135 +843,134 @@ with col_der:
                     # Verificar si matplotlib está disponible para el PDF
                     if not MATPLOTLIB_AVAILABLE:
                         st.error("⚠️ Matplotlib no está disponible. No se pueden incluir gráficos en el PDF.")
-                        return
+                    else:
+                        import matplotlib
+                        matplotlib.use('Agg')  # Backend no interactivo para Streamlit
+                        import matplotlib.pyplot as plt
+                        import numpy as np
 
-                    import matplotlib
-                    matplotlib.use('Agg')  # Backend no interactivo para Streamlit
-                    import matplotlib.pyplot as plt
-                    import numpy as np
+                        # Crear figura con todos los resultados
+                        fig_report = plt.figure(figsize=(16, 24))
 
-                    # Crear figura con todos los resultados
-                    fig_report = plt.figure(figsize=(16, 24))
+                        # Título principal
+                        plt.figtext(0.5, 0.98, f'REPORTE DE DISEÑO DE PAVIMENTO RÍGIDO\n{proyecto}', 
+                                   ha='center', va='top', fontsize=16, fontweight='bold')
 
-                    # Título principal
-                    plt.figtext(0.5, 0.98, f'REPORTE DE DISEÑO DE PAVIMENTO RÍGIDO\n{proyecto}', 
-                               ha='center', va='top', fontsize=16, fontweight='bold')
+                        # Subplot 1: Gráficos de sensibilidad
+                        plt.subplot(5, 2, 1)
+                        plt.plot(k_range, D_k, color='blue', linewidth=2)
+                        plt.axvline(x=k_analisis, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {k_analisis}')
+                        plt.title('Espesor vs Módulo de reacción (k)', fontsize=10, fontweight='bold')
+                        plt.xlabel('k (pci)')
+                        plt.ylabel('D (pulg)')
+                        plt.grid(True, alpha=0.3)
+                        plt.legend()
 
-                    # Subplot 1: Gráficos de sensibilidad
-                    plt.subplot(5, 2, 1)
-                    plt.plot(k_range, D_k, color='blue', linewidth=2)
-                    plt.axvline(x=k_analisis, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {k_analisis}')
-                    plt.title('Espesor vs Módulo de reacción (k)', fontsize=10, fontweight='bold')
-                    plt.xlabel('k (pci)')
-                    plt.ylabel('D (pulg)')
-                    plt.grid(True, alpha=0.3)
-                    plt.legend()
+                        plt.subplot(5, 2, 2)
+                        plt.plot(Sc_range, D_Sc, color='green', linewidth=2)
+                        plt.axvline(x=Sc, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {Sc}')
+                        plt.title('Espesor vs Módulo de rotura (Sc)', fontsize=10, fontweight='bold')
+                        plt.xlabel('Sc (psi)')
+                        plt.ylabel('D (pulg)')
+                        plt.grid(True, alpha=0.3)
+                        plt.legend()
 
-                    plt.subplot(5, 2, 2)
-                    plt.plot(Sc_range, D_Sc, color='green', linewidth=2)
-                    plt.axvline(x=Sc, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {Sc}')
-                    plt.title('Espesor vs Módulo de rotura (Sc)', fontsize=10, fontweight='bold')
-                    plt.xlabel('Sc (psi)')
-                    plt.ylabel('D (pulg)')
-                    plt.grid(True, alpha=0.3)
-                    plt.legend()
+                        plt.subplot(5, 2, 3)
+                        plt.plot(W18_range, D_W18, color='orange', linewidth=2)
+                        plt.axvline(x=W18, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {W18:,.0f}')
+                        plt.title('Espesor vs Tránsito (W18)', fontsize=10, fontweight='bold')
+                        plt.xlabel('W18')
+                        plt.ylabel('D (pulg)')
+                        plt.grid(True, alpha=0.3)
+                        plt.legend()
 
-                    plt.subplot(5, 2, 3)
-                    plt.plot(W18_range, D_W18, color='orange', linewidth=2)
-                    plt.axvline(x=W18, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {W18:,.0f}')
-                    plt.title('Espesor vs Tránsito (W18)', fontsize=10, fontweight='bold')
-                    plt.xlabel('W18')
-                    plt.ylabel('D (pulg)')
-                    plt.grid(True, alpha=0.3)
-                    plt.legend()
+                        plt.subplot(5, 2, 4)
+                        plt.plot(R_range, D_R, color='purple', linewidth=2)
+                        plt.axvline(x=R, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {R}')
+                        plt.title('Espesor vs Confiabilidad (R)', fontsize=10, fontweight='bold')
+                        plt.xlabel('R')
+                        plt.ylabel('D (pulg)')
+                        plt.grid(True, alpha=0.3)
+                        plt.legend()
 
-                    plt.subplot(5, 2, 4)
-                    plt.plot(R_range, D_R, color='purple', linewidth=2)
-                    plt.axvline(x=R, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {R}')
-                    plt.title('Espesor vs Confiabilidad (R)', fontsize=10, fontweight='bold')
-                    plt.xlabel('R')
-                    plt.ylabel('D (pulg)')
-                    plt.grid(True, alpha=0.3)
-                    plt.legend()
+                        # Subplot 5: Datos del proyecto
+                        plt.subplot(5, 2, (5, 6))
+                        plt.axis('off')
+                        proyecto_data = [
+                            ['Datos del Proyecto', 'Valor', 'Unidad'],
+                            ['Nombre del Proyecto', proyecto, ''],
+                            ['Descripción', descripcion, ''],
+                            ['Período de diseño', f'{periodo}', 'años'],
+                            ['Espesor de losa', f'{espesor_losa}', 'mm'],
+                            ['Módulo de rotura', f'{modulo_rotura}', 'psi'],
+                            ['Dovelas', dovelas, ''],
+                            ['Bermas', bermas, ''],
+                            ['Factor de seguridad', f'{factor_seg}', ''],
+                            ['Tipo de ejes', tipo_ejes, '']
+                        ]
+                        proyecto_table = plt.table(cellText=proyecto_data[1:], colLabels=proyecto_data[0], 
+                                                 cellLoc='center', loc='center', colWidths=[0.4, 0.3, 0.2])
+                        proyecto_table.auto_set_font_size(False)
+                        proyecto_table.set_fontsize(8)
+                        proyecto_table.scale(1, 1.5)
+                        plt.title('Datos del Proyecto', fontsize=12, fontweight='bold', pad=20)
 
-                    # Subplot 5: Datos del proyecto
-                    plt.subplot(5, 2, (5, 6))
-                    plt.axis('off')
-                    proyecto_data = [
-                        ['Datos del Proyecto', 'Valor', 'Unidad'],
-                        ['Nombre del Proyecto', proyecto, ''],
-                        ['Descripción', descripcion, ''],
-                        ['Período de diseño', f'{periodo}', 'años'],
-                        ['Espesor de losa', f'{espesor_losa}', 'mm'],
-                        ['Módulo de rotura', f'{modulo_rotura}', 'psi'],
-                        ['Dovelas', dovelas, ''],
-                        ['Bermas', bermas, ''],
-                        ['Factor de seguridad', f'{factor_seg}', ''],
-                        ['Tipo de ejes', tipo_ejes, '']
-                    ]
-                    proyecto_table = plt.table(cellText=proyecto_data[1:], colLabels=proyecto_data[0], 
+                        # Subplot 6: Resultados del análisis
+                        plt.subplot(5, 2, (7, 8))
+                        plt.axis('off')
+                        resultados_data = [
+                            ['Resultados del Análisis', 'Valor', 'Estado'],
+                            ['Espesor de losa (D)', f'{D_actual:.2f} pulg', 'Calculado'],
+                            ['Fatiga (%)', f'{fatiga_actual*100:.2f}%', 'Analizado'],
+                            ['Erosión (%)', f'{erosion_actual*100:.2f}%', 'Analizado'],
+                            ['Módulo de reacción (k)', f'{k_analisis} pci', 'Entrada'],
+                            ['Módulo de rotura (Sc)', f'{Sc} psi', 'Entrada'],
+                            ['Tránsito (W18)', f'{W18:,.0f}', 'Calculado'],
+                            ['Confiabilidad (R)', f'{R}', 'Entrada'],
+                            ['Junta máxima (L)', f'{L_junta:.2f} m', 'Calculado'],
+                            ['Área acero temp (As)', f'{As_temp:.2f} cm²', 'Calculado']
+                        ]
+                        resultados_table = plt.table(cellText=resultados_data[1:], colLabels=resultados_data[0], 
+                                                   cellLoc='center', loc='center', colWidths=[0.4, 0.3, 0.2])
+                        resultados_table.auto_set_font_size(False)
+                        resultados_table.set_fontsize(8)
+                        resultados_table.scale(1, 1.5)
+                        plt.title('Resultados del Análisis', fontsize=12, fontweight='bold', pad=20)
+
+                        # Subplot 7: Análisis de sensibilidad
+                        plt.subplot(5, 2, (9, 10))
+                        plt.axis('off')
+                        sens_table_data = [
+                            ['Análisis de Sensibilidad', 'Valor', 'Impacto'],
+                            ['Módulo de reacción (k)', f'{sens_k:.3f}', 'Alto' if sens_k > 0.5 else 'Medio' if sens_k > 0.2 else 'Bajo'],
+                            ['Módulo de rotura (Sc)', f'{sens_Sc:.3f}', 'Alto' if sens_Sc > 0.5 else 'Medio' if sens_Sc > 0.2 else 'Bajo'],
+                            ['Tránsito (W18)', f'{sens_W18:.3f}', 'Alto' if sens_W18 > 0.5 else 'Medio' if sens_W18 > 0.2 else 'Bajo']
+                        ]
+                        sens_table = plt.table(cellText=sens_table_data[1:], colLabels=sens_table_data[0], 
                                              cellLoc='center', loc='center', colWidths=[0.4, 0.3, 0.2])
-                    proyecto_table.auto_set_font_size(False)
-                    proyecto_table.set_fontsize(8)
-                    proyecto_table.scale(1, 1.5)
-                    plt.title('Datos del Proyecto', fontsize=12, fontweight='bold', pad=20)
+                        sens_table.auto_set_font_size(False)
+                        sens_table.set_fontsize(8)
+                        sens_table.scale(1, 1.5)
+                        plt.title('Análisis de Sensibilidad', fontsize=12, fontweight='bold', pad=20)
 
-                    # Subplot 6: Resultados del análisis
-                    plt.subplot(5, 2, (7, 8))
-                    plt.axis('off')
-                    resultados_data = [
-                        ['Resultados del Análisis', 'Valor', 'Estado'],
-                        ['Espesor de losa (D)', f'{D_actual:.2f} pulg', 'Calculado'],
-                        ['Fatiga (%)', f'{fatiga_actual*100:.2f}%', 'Analizado'],
-                        ['Erosión (%)', f'{erosion_actual*100:.2f}%', 'Analizado'],
-                        ['Módulo de reacción (k)', f'{k_analisis} pci', 'Entrada'],
-                        ['Módulo de rotura (Sc)', f'{Sc} psi', 'Entrada'],
-                        ['Tránsito (W18)', f'{W18:,.0f}', 'Calculado'],
-                        ['Confiabilidad (R)', f'{R}', 'Entrada'],
-                        ['Junta máxima (L)', f'{L_junta:.2f} m', 'Calculado'],
-                        ['Área acero temp (As)', f'{As_temp:.2f} cm²', 'Calculado']
-                    ]
-                    resultados_table = plt.table(cellText=resultados_data[1:], colLabels=resultados_data[0], 
-                                               cellLoc='center', loc='center', colWidths=[0.4, 0.3, 0.2])
-                    resultados_table.auto_set_font_size(False)
-                    resultados_table.set_fontsize(8)
-                    resultados_table.scale(1, 1.5)
-                    plt.title('Resultados del Análisis', fontsize=12, fontweight='bold', pad=20)
+                        plt.tight_layout()
+                        plt.subplots_adjust(top=0.95)
 
-                    # Subplot 7: Análisis de sensibilidad
-                    plt.subplot(5, 2, (9, 10))
-                    plt.axis('off')
-                    sens_table_data = [
-                        ['Análisis de Sensibilidad', 'Valor', 'Impacto'],
-                        ['Módulo de reacción (k)', f'{sens_k:.3f}', 'Alto' if sens_k > 0.5 else 'Medio' if sens_k > 0.2 else 'Bajo'],
-                        ['Módulo de rotura (Sc)', f'{sens_Sc:.3f}', 'Alto' if sens_Sc > 0.5 else 'Medio' if sens_Sc > 0.2 else 'Bajo'],
-                        ['Tránsito (W18)', f'{sens_W18:.3f}', 'Alto' if sens_W18 > 0.5 else 'Medio' if sens_W18 > 0.2 else 'Bajo']
-                    ]
-                    sens_table = plt.table(cellText=sens_table_data[1:], colLabels=sens_table_data[0], 
-                                         cellLoc='center', loc='center', colWidths=[0.4, 0.3, 0.2])
-                    sens_table.auto_set_font_size(False)
-                    sens_table.set_fontsize(8)
-                    sens_table.scale(1, 1.5)
-                    plt.title('Análisis de Sensibilidad', fontsize=12, fontweight='bold', pad=20)
+                        # Guardar PDF
+                        pdf_buffer = BytesIO()
+                        fig_report.savefig(pdf_buffer, format='pdf', bbox_inches='tight', dpi=300)
+                        pdf_buffer.seek(0)
 
-                    plt.tight_layout()
-                    plt.subplots_adjust(top=0.95)
+                        # Botón de descarga
+                        st.download_button(
+                            label="📥 Descargar Reporte PDF Completo del Proyecto",
+                            data=pdf_buffer.getvalue(),
+                            file_name=f"reporte_completo_pavimento_{proyecto}.pdf",
+                            mime="application/pdf",
+                            key="btn_download_pdf"
+                        )
 
-                    # Guardar PDF
-                    pdf_buffer = BytesIO()
-                    fig_report.savefig(pdf_buffer, format='pdf', bbox_inches='tight', dpi=300)
-                    pdf_buffer.seek(0)
-
-                    # Botón de descarga
-                    st.download_button(
-                        label="📥 Descargar Reporte PDF Completo del Proyecto",
-                        data=pdf_buffer.getvalue(),
-                        file_name=f"reporte_completo_pavimento_{proyecto}.pdf",
-                        mime="application/pdf",
-                        key="btn_download_pdf"
-                    )
-
-                    st.success("✅ Reporte PDF del proyecto generado exitosamente con todos los datos, resultados y gráficos.")
+                        st.success("✅ Reporte PDF del proyecto generado exitosamente con todos los datos, resultados y gráficos.")
 
                 except Exception as e:
                     st.error(f"❌ Error al generar PDF: {str(e)}")
@@ -982,7 +980,7 @@ with col_der:
         except Exception as e:
             st.error(f"Error generando el análisis de sensibilidad: {str(e)}")
 
-    else:
+    if not sensibilidad:
         # Definir k_analisis y reps igual que en el cálculo
         if subrasante_tipo == "Ingreso directo":
             k_analisis = k_val

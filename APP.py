@@ -329,6 +329,16 @@ with col_der:
         st.markdown(f"<span style='color:red'><b>Porcentaje de erosión</b></span>: {porcentaje_erosion:.2f}", unsafe_allow_html=True)
         st.divider()
 
+        # Mensajes de advertencia para fatiga y erosión
+        if porcentaje_fatiga > 100:
+            st.error("⚠️ Porcentaje de fatiga crítico: el diseño NO es seguro. Aumente el espesor de losa o revise parámetros.")
+        elif porcentaje_fatiga > 50:
+            st.warning("⚠️ Porcentaje de fatiga moderado: el diseño está en el límite aceptable.")
+        if porcentaje_erosion > 100:
+            st.error("⚠️ Porcentaje de erosión crítico: riesgo de falla por erosión. Mejore la subrasante o aumente el espesor de subbase.")
+        elif porcentaje_erosion > 50:
+            st.warning("⚠️ Porcentaje de erosión moderado: verifique drenaje y calidad de subrasante.")
+
         # --- CÁLCULO RECOMENDACIONES BARRAS Y PASADORES (AASHTO/PERU) ---
         # Diámetro de barra seleccionado (en mm o in)
         diam_barras_dict = {"3/8\"": 9.5, "1/2\"": 12.7, "5/8\"": 15.9, "3/4\"": 19.1}  # mm
@@ -622,12 +632,13 @@ with col_der:
         st.success("✅ Análisis de sensibilidad completado con gráficos, recomendaciones y opción de exportación.")
 
     else:
-        st.markdown("**Espesor de losa :**  ", help="mm/in")
-        st.markdown("**Módulo de rotura :**  ", help="psi/MPa")
-        st.markdown("**K del conjunto :**  ", help="pci/MPa/m")
-        st.markdown("**Período de diseño :**  ", help="años")
-        st.markdown("<span style='color:red'><b>Porcentaje de fatiga</b></span>: 0.00", unsafe_allow_html=True)
-        st.markdown("<span style='color:red'><b>Porcentaje de erosión</b></span>: 0.00", unsafe_allow_html=True)
+        # Mostrar campos vacíos o 0.00 si no se ha calculado
+        st.markdown(f"**Espesor de losa :** <span style='color:#1976D2'>0.00</span>", unsafe_allow_html=True)
+        st.markdown(f"**Módulo de rotura :** <span style='color:#1976D2'>0.00</span>", unsafe_allow_html=True)
+        st.markdown(f"**K del conjunto :** <span style='color:#1976D2'>0.00</span>", unsafe_allow_html=True)
+        st.markdown(f"**Período de diseño :** <span style='color:#1976D2'>0</span>", unsafe_allow_html=True)
+        st.markdown(f"<span style='color:red'><b>Porcentaje de fatiga</b></span>: 0.00", unsafe_allow_html=True)
+        st.markdown(f"<span style='color:red'><b>Porcentaje de erosión</b></span>: 0.00", unsafe_allow_html=True)
         st.divider()
         st.markdown("**Recomendación para barras de anclaje:**")
         st.markdown("Longitud:  ")

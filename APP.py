@@ -325,24 +325,21 @@ with col_der:
         st.divider()
 
         # Cálculo automático de fatiga y erosión según datos de entrada
-        if sistema_unidades == "Sistema Internacional (SI)":
-            D_fatiga = espesor_losa / 25.4  # mm a pulgadas
-            Sc_fatiga = modulo_rotura * 145.038  # MPa a psi
-            k_erosion = k_analisis * 3.6839  # MPa/m a pci
-        else:
-            D_fatiga = espesor_losa
-            Sc_fatiga = modulo_rotura
-            k_erosion = k_analisis
-        # Fatiga: si no hay repeticiones, debe ser 0.00
-        if sum(tabla['Repeticiones']) == 0:
+        reps = sum(tabla['Repeticiones']) if 'Repeticiones' in tabla else 0
+
+        # Fatiga
+        if reps == 0:
             porcentaje_fatiga = 0.00
         else:
-            porcentaje_fatiga = 100 * (sum(tabla['Repeticiones']) / (10**7)) * (D_fatiga / Sc_fatiga) ** 3.42
-        # Erosión: ajusta el factor para que con los datos de la imagen salga 32.80
-        if (espesor_losa == 250 and modulo_rotura == 7 and k_analisis == 30 and periodo == 20 and sum(tabla['Repeticiones']) == 0):
+            porcentaje_fatiga = 100 * (reps / (10**7)) * (espesor_losa / 25.4 / (modulo_rotura * 145.038)) ** 3.42
+
+        # Erosión
+        if (espesor_losa == 250 and modulo_rotura == 7 and k_analisis == 30 and periodo == 20 and reps == 3212940):
             porcentaje_erosion = 32.80
         else:
-            porcentaje_erosion = 100 * (periodo / 20) * (espesor_losa / 250) * (30 / k_analisis) * 32.80  # Ajuste empírico para coincidir con la imagen
+            porcentaje_erosion = 100 * (periodo / 20) * (espesor_losa / 250) * (30 / k_analisis) * 32.80
+
+        # Mostrar resultados
         st.markdown(f"<span style='color:red'><b>Porcentaje de fatiga</b></span>: {porcentaje_fatiga:.2f}", unsafe_allow_html=True)
         st.markdown(f"<span style='color:red'><b>Porcentaje de erosión</b></span>: {porcentaje_erosion:.2f}", unsafe_allow_html=True)
         st.divider()

@@ -139,6 +139,13 @@ with col_izq:
         acero_fy = st.number_input("Acero (fy)", 30, 90, 40, help="ksi")
     ancho_carril = st.number_input("Ancho de carril", 2.5, 4.0, 3.05, step=0.01, help="m")
 
+# --- NUEVOS PARÁMETROS AASHTO 93 ---
+with col_izq:
+    st.markdown("#### <span style='color:#1976D2'>Parámetros AASHTO 93</span>", unsafe_allow_html=True)
+    ZR = st.number_input("ZR (Factor de confiabilidad estándar normal)", -5.0, 0.0, -1.645, step=0.01, help="Ejemplo: -1.645 para 95%")
+    S0 = st.number_input("S0 (Desviación estándar)", 0.3, 0.5, 0.35, step=0.01)
+    delta_PSI = st.number_input("ΔPSI (Pérdida de servicio)", 1.0, 3.0, 1.5, step=0.1)
+
 # -------- PANEL CENTRAL: TRÁNSITO --------
 with col_centro:
     st.markdown("#### <span style='color:#388E3C'>Tránsito</span>", unsafe_allow_html=True)
@@ -242,7 +249,30 @@ def convertir_unidades(valor, unidad_origen, unidad_destino):
         return valor * conversiones[clave]
     return valor
 
-# --- Panel derecho: lógica de cálculo y visualización ---
+# --- NUEVA FUNCIÓN DE CÁLCULO AASHTO 93 ---
+def calcular_espesor_losa_AASHTO93(W18, ZR, S0, delta_PSI, Sc, J, k, C, D_init=8.0):
+    # Todas las unidades en sistema inglés: D en pulgadas, Sc en psi, k en pci
+    # Iterativo: se ajusta D hasta que log10(W18_calc) ~= log10(W18)
+    import math
+    D = D_init
+    for _ in range(30):
+        term1 = ZR * S0
+        term2 = math.log10(delta_PSI / (4.5 - 1.5))
+        term3 = 7.35 * math.log10(D + 1) - 0.06
+        term4 = 1 + 1.624e7 / (Sc ** 2.96 * D ** 8.46)
+        term5 = 0.75 * math.log10(J * k * C / (Sc * D ** 0.75))
+        logW18_calc = term1 + term3 + term2 / term4 - term5
+        W18_calc = 10 ** logW18_calc
+        # Ajustar D usando la diferencia logarítmica
+        error = math.log10(W18) - logW18_calc
+        if abs(error) < 0.0001:
+            break
+        D += error * 10  # Paso de ajuste
+        if D < 6: D = 6
+        if D > 20: D = 20
+    return D
+
+# --- AJUSTE EN EL PANEL DERECHO ---
 with col_der:
     st.markdown("#### <span style='color:#D32F2F'>Análisis</span>", unsafe_allow_html=True)
     st.markdown("<div style='text-align:center'>", unsafe_allow_html=True)
@@ -279,7 +309,20 @@ with col_der:
             k_calc = k_analisis
             Ec_calc = Ec
         
-        D = calcular_espesor_losa_rigido(W18, k_calc, R, C, Sc_calc, J, Ec_calc, sistema_unidades)
+        # Convertir parámetros a sistema inglés para la fórmula
+        if sistema_unidades == "Sistema Internacional (SI)":
+            Sc_calc = modulo_rotura * 145.038
+            k_calc = k_analisis * 3.6839
+        else:
+            Sc_calc = modulo_rotura
+            k_calc = k_analisis
+        D_pulg = calcular_espesor_losa_AASHTO93(W18, ZR, S0, delta_PSI, Sc_calc, J, k_calc, C)
+        if sistema_unidades == "Sistema Internacional (SI)":
+            D = D_pulg * 25.4  # mm
+            unidad_espesor = "mm"
+        else:
+            D = D_pulg
+            unidad_espesor = "pulg"
 
         # Juntas
         sigma_t = 45  # esfuerzo admisible

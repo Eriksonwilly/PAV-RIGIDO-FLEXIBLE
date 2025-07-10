@@ -331,17 +331,21 @@ with col_der:
         
         st.dataframe(sensibilidad_df, use_container_width=True)
         
-        # Exportación PDF mejorada
-        st.markdown("### 📤 Exportar Resultados Completos")
+        # Exportación PDF mejorada con todos los datos del proyecto
+        st.markdown("### 📤 Exportar Reporte Completo del Proyecto")
         
-        # Crear PDF con todos los resultados
-        if st.button("📄 Generar Reporte PDF Completo", key="btn_export_pdf"):
+        # Crear PDF con todos los resultados del proyecto
+        if st.button("📄 Generar Reporte PDF del Proyecto", key="btn_export_pdf"):
             try:
                 # Crear figura con todos los resultados
-                fig_report = plt.figure(figsize=(16, 20))
+                fig_report = plt.figure(figsize=(16, 24))
+                
+                # Título principal
+                plt.figtext(0.5, 0.98, f'REPORTE DE DISEÑO DE PAVIMENTO RÍGIDO\n{proyecto}', 
+                           ha='center', va='top', fontsize=16, fontweight='bold')
                 
                 # Subplot 1: Gráficos de sensibilidad
-                plt.subplot(4, 2, 1)
+                plt.subplot(5, 2, 1)
                 plt.plot(k_range, D_k, color='blue', linewidth=2)
                 plt.axvline(x=k, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {k}')
                 plt.title('Espesor vs Módulo de reacción (k)', fontsize=10, fontweight='bold')
@@ -350,7 +354,7 @@ with col_der:
                 plt.grid(True, alpha=0.3)
                 plt.legend()
                 
-                plt.subplot(4, 2, 2)
+                plt.subplot(5, 2, 2)
                 plt.plot(Sc_range, D_Sc, color='green', linewidth=2)
                 plt.axvline(x=Sc, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {Sc}')
                 plt.title('Espesor vs Módulo de rotura (Sc)', fontsize=10, fontweight='bold')
@@ -359,7 +363,7 @@ with col_der:
                 plt.grid(True, alpha=0.3)
                 plt.legend()
                 
-                plt.subplot(4, 2, 3)
+                plt.subplot(5, 2, 3)
                 plt.plot(W18_range, D_W18, color='orange', linewidth=2)
                 plt.axvline(x=W18, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {W18:,.0f}')
                 plt.title('Espesor vs Tránsito (W18)', fontsize=10, fontweight='bold')
@@ -368,7 +372,7 @@ with col_der:
                 plt.grid(True, alpha=0.3)
                 plt.legend()
                 
-                plt.subplot(4, 2, 4)
+                plt.subplot(5, 2, 4)
                 plt.plot(R_range, D_R, color='purple', linewidth=2)
                 plt.axvline(x=R, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {R}')
                 plt.title('Espesor vs Confiabilidad (R)', fontsize=10, fontweight='bold')
@@ -377,31 +381,55 @@ with col_der:
                 plt.grid(True, alpha=0.3)
                 plt.legend()
                 
-                # Subplot 5: Tabla de resultados
-                plt.subplot(4, 2, (5, 6))
+                # Subplot 5: Datos del proyecto
+                plt.subplot(5, 2, (5, 6))
                 plt.axis('off')
-                table_data = [
-                    ['Parámetro', 'Valor Actual', 'Resultado'],
+                proyecto_data = [
+                    ['Datos del Proyecto', 'Valor', 'Unidad'],
+                    ['Nombre del Proyecto', proyecto, ''],
+                    ['Descripción', descripcion, ''],
+                    ['Período de diseño', f'{periodo}', 'años'],
+                    ['Espesor de losa', f'{espesor_losa}', 'mm'],
+                    ['Módulo de rotura', f'{modulo_rotura}', 'psi'],
+                    ['Dovelas', dovelas, ''],
+                    ['Bermas', bermas, ''],
+                    ['Factor de seguridad', f'{factor_seg}', ''],
+                    ['Tipo de ejes', tipo_ejes, '']
+                ]
+                proyecto_table = plt.table(cellText=proyecto_data[1:], colLabels=proyecto_data[0], 
+                                         cellLoc='center', loc='center', colWidths=[0.4, 0.3, 0.2])
+                proyecto_table.auto_set_font_size(False)
+                proyecto_table.set_fontsize(8)
+                proyecto_table.scale(1, 1.5)
+                plt.title('Datos del Proyecto', fontsize=12, fontweight='bold', pad=20)
+                
+                # Subplot 6: Resultados del análisis
+                plt.subplot(5, 2, (7, 8))
+                plt.axis('off')
+                resultados_data = [
+                    ['Resultados del Análisis', 'Valor', 'Estado'],
                     ['Espesor de losa (D)', f'{D_actual:.2f} pulg', 'Calculado'],
                     ['Fatiga (%)', f'{fatiga_actual*100:.2f}%', 'Analizado'],
                     ['Erosión (%)', f'{erosion_actual*100:.2f}%', 'Analizado'],
                     ['Módulo de reacción (k)', f'{k} pci', 'Entrada'],
                     ['Módulo de rotura (Sc)', f'{Sc} psi', 'Entrada'],
                     ['Tránsito (W18)', f'{W18:,.0f}', 'Calculado'],
-                    ['Confiabilidad (R)', f'{R}', 'Entrada']
+                    ['Confiabilidad (R)', f'{R}', 'Entrada'],
+                    ['Junta máxima (L)', f'{L_junta:.2f} m', 'Calculado'],
+                    ['Área acero temp (As)', f'{As_temp:.2f} cm²', 'Calculado']
                 ]
-                table = plt.table(cellText=table_data[1:], colLabels=table_data[0], 
-                                cellLoc='center', loc='center', colWidths=[0.3, 0.3, 0.2])
-                table.auto_set_font_size(False)
-                table.set_fontsize(9)
-                table.scale(1, 2)
+                resultados_table = plt.table(cellText=resultados_data[1:], colLabels=resultados_data[0], 
+                                           cellLoc='center', loc='center', colWidths=[0.4, 0.3, 0.2])
+                resultados_table.auto_set_font_size(False)
+                resultados_table.set_fontsize(8)
+                resultados_table.scale(1, 1.5)
                 plt.title('Resultados del Análisis', fontsize=12, fontweight='bold', pad=20)
                 
-                # Subplot 6: Tabla de sensibilidad
-                plt.subplot(4, 2, (7, 8))
+                # Subplot 7: Análisis de sensibilidad
+                plt.subplot(5, 2, (9, 10))
                 plt.axis('off')
                 sens_table_data = [
-                    ['Parámetro', 'Sensibilidad', 'Impacto'],
+                    ['Análisis de Sensibilidad', 'Valor', 'Impacto'],
                     ['Módulo de reacción (k)', f'{sens_k:.3f}', 'Alto' if sens_k > 0.5 else 'Medio' if sens_k > 0.2 else 'Bajo'],
                     ['Módulo de rotura (Sc)', f'{sens_Sc:.3f}', 'Alto' if sens_Sc > 0.5 else 'Medio' if sens_Sc > 0.2 else 'Bajo'],
                     ['Tránsito (W18)', f'{sens_W18:.3f}', 'Alto' if sens_W18 > 0.5 else 'Medio' if sens_W18 > 0.2 else 'Bajo']
@@ -409,11 +437,12 @@ with col_der:
                 sens_table = plt.table(cellText=sens_table_data[1:], colLabels=sens_table_data[0], 
                                      cellLoc='center', loc='center', colWidths=[0.4, 0.3, 0.2])
                 sens_table.auto_set_font_size(False)
-                sens_table.set_fontsize(9)
-                sens_table.scale(1, 2)
+                sens_table.set_fontsize(8)
+                sens_table.scale(1, 1.5)
                 plt.title('Análisis de Sensibilidad', fontsize=12, fontweight='bold', pad=20)
                 
                 plt.tight_layout()
+                plt.subplots_adjust(top=0.95)
                 
                 # Guardar PDF
                 pdf_buffer = BytesIO()
@@ -422,14 +451,14 @@ with col_der:
                 
                 # Botón de descarga
                 st.download_button(
-                    label="📥 Descargar Reporte PDF Completo",
+                    label="📥 Descargar Reporte PDF Completo del Proyecto",
                     data=pdf_buffer.getvalue(),
-                    file_name=f"reporte_pavimento_{proyecto}.pdf",
+                    file_name=f"reporte_completo_pavimento_{proyecto}.pdf",
                     mime="application/pdf",
                     key="btn_download_pdf"
                 )
                 
-                st.success("✅ Reporte PDF generado exitosamente con todos los resultados y gráficos.")
+                st.success("✅ Reporte PDF del proyecto generado exitosamente con todos los datos, resultados y gráficos.")
                 
             except Exception as e:
                 st.error(f"❌ Error al generar PDF: {str(e)}")

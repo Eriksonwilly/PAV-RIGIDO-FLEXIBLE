@@ -4,6 +4,19 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from io import BytesIO
 import base64
+import json
+import os
+from datetime import datetime
+
+# --- MÓDULOS AVANZADOS DE INTEGRACIÓN ---
+try:
+    from MODULO_LIDAR_DRONES import procesamiento_completo_lidar
+    from MODULO_DISENO_AUTOMATIZADO import diseno_automatizado_completo
+    from MODULO_INTEROPERABILIDAD import interoperabilidad_completa
+    MODULOS_AVANZADOS_DISPONIBLES = True
+except ImportError:
+    MODULOS_AVANZADOS_DISPONIBLES = False
+    print("⚠️ Módulos avanzados no disponibles. Usando funcionalidad básica.")
 
 # --- GESTIÓN ROBUSTA DE DEPENDENCIAS Y GRÁFICOS ---
 # Inspirado en APP1.py, pero manteniendo la estructura de APP.py
@@ -2047,7 +2060,8 @@ tabs = st.tabs([
     'Pavimento Flexible',
     'Veredas y Cunetas',
     'Drenaje',
-    'Normativas Locales'
+    'Normativas Locales',
+    '🚁 Caso Práctico San Miguel'
 ])
 
 # --- PAVIMENTO RÍGIDO ---
@@ -3256,3 +3270,192 @@ with tabs[4]:
                         mime="application/pdf",
                         key="btn_download_premium_normativas"
                     )
+
+# --- CASO PRÁCTICO SAN MIGUEL ---
+with tabs[5]:
+    st.header('🚁 Caso Práctico San Miguel - Puno')
+    st.info('🏗️ Caso real de diseño de pavimentos para una cuadra en San Miguel, Puno con datos de drone LiDAR, análisis geotécnico y exportación a software externo.')
+    
+    # Verificar si los módulos avanzados están disponibles
+    if not MODULOS_AVANZADOS_DISPONIBLES:
+        st.warning("⚠️ Los módulos avanzados no están disponibles. Se mostrará información simulada.")
+        
+        # Datos simulados para demostración
+        st.subheader('📊 Datos del Proyecto')
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Información del Proyecto:**")
+            st.markdown("• **Proyecto:** San Miguel - Cuadra 1")
+            st.markdown("• **Ubicación:** San Miguel, Puno, Perú")
+            st.markdown("• **Altitud:** 3,850 msnm")
+            st.markdown("• **Coordenadas:** UTM 18S (100, 8000)")
+            st.markdown("• **Longitud:** 100 metros")
+            st.markdown("• **Ancho calzada:** 6.0 metros")
+        
+        with col2:
+            st.markdown("**Características del Terreno:**")
+            st.markdown("• **Tipo de suelo:** Volcánico")
+            st.markdown("• **CBR:** 4.5%")
+            st.markdown("• **Módulo k:** 45 MPa/m")
+            st.markdown("• **Pendiente:** 5.2%")
+            st.markdown("• **Clima:** Sierra (frío)")
+            st.markdown("• **Tránsito:** Urbano (250,000 ESALs)")
+        
+        st.subheader('🚁 Datos LiDAR Simulados')
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Vuelo de Drone:**")
+            st.markdown("• **Fecha:** 15/01/2024")
+            st.markdown("• **Altura de vuelo:** 120 m")
+            st.markdown("• **Resolución:** 5 cm")
+            st.markdown("• **Puntos por m²:** 400")
+            st.markdown("• **Cobertura:** 85%")
+        
+        with col2:
+            st.markdown("**Procesamiento:**")
+            st.markdown("• **Puntos procesados:** 850,000")
+            st.markdown("• **Área:** 0.08 hectáreas")
+            st.markdown("• **MDT generado:** ✅")
+            st.markdown("• **Curvas de nivel:** 12 niveles")
+            st.markdown("• **Zonas críticas:** 2 detectadas")
+        
+        st.subheader('🏗️ Resultados de Diseño')
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Pavimento Rígido:**")
+            st.markdown("• **Espesor:** 20.5 cm")
+            st.markdown("• **Juntas transversales:** 61.5 m")
+            st.markdown("• **Juntas longitudinales:** 92.3 m")
+            st.markdown("• **Concreto:** NP 350")
+            st.markdown("• **Refuerzo:** Sin refuerzo")
+        
+        with col2:
+            st.markdown("**Pavimento Flexible:**")
+            st.markdown("• **Base:** 7.5 cm (Grava A-1-a)")
+            st.markdown("• **Subbase:** 17.5 cm (Material granular)")
+            st.markdown("• **Total:** 25.0 cm")
+            st.markdown("• **Asfalto:** AC-20")
+            st.markdown("• **Compactación:** 95% Proctor")
+        
+        st.subheader('📁 Archivos Generados')
+        st.markdown("• **san_miguel_diseño.dwg** - AutoCAD Civil 3D")
+        st.markdown("• **san_miguel_analisis.qgz** - QGIS")
+        st.markdown("• **san_miguel_modelo.rvt** - Revit BIM")
+        st.markdown("• **mdt_terreno.tif** - Modelo Digital del Terreno")
+        st.markdown("• **curvas_nivel.shp** - Curvas de nivel")
+        
+        st.subheader('💡 Conclusiones')
+        st.markdown("• El suelo volcánico de San Miguel requiere estabilización previa")
+        st.markdown("• La pendiente del 5.2% es adecuada para drenaje superficial")
+        st.markdown("• El pavimento rígido es más económico a largo plazo")
+        st.markdown("• Se recomienda juntas cada 61.5m transversales y 92.3m longitudinales")
+        st.markdown("• El proyecto cumple con todas las normativas peruanas vigentes")
+        
+        st.subheader('📋 Recomendaciones')
+        st.markdown("• Realizar estabilización de subrasante con cemento al 3%")
+        st.markdown("• Implementar drenaje subterráneo en zonas críticas")
+        st.markdown("• Usar concreto NP 350 con MR ≥ 4.5 MPa")
+        st.markdown("• Monitorear juntas durante los primeros 6 meses")
+        st.markdown("• Programar mantenimiento preventivo cada 5 años")
+        
+    else:
+        # Si los módulos están disponibles, ejecutar caso real
+        st.subheader('🚀 Ejecutar Caso Práctico Completo')
+        
+        if st.button('🏗️ EJECUTAR CASO PRÁCTICO SAN MIGUEL', use_container_width=True):
+            with st.spinner('🔄 Ejecutando caso práctico completo...'):
+                try:
+                    # Importar y ejecutar caso práctico
+                    from CASO_PRACTICO_SAN_MIGUEL_COMPLETO import CasoPracticoSanMiguel
+                    
+                    caso = CasoPracticoSanMiguel()
+                    resultado = caso.ejecutar_caso_completo()
+                    
+                    if "error" not in resultado:
+                        st.success('✅ Caso práctico ejecutado exitosamente!')
+                        
+                        # Mostrar resumen ejecutivo
+                        st.subheader('📊 Resumen Ejecutivo')
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("Proyecto", resultado['resumen_ejecutivo']['proyecto'])
+                            st.metric("Tipo Pavimento", resultado['resumen_ejecutivo']['tipo_pavimento_recomendado'])
+                        with col2:
+                            st.metric("Espesor", resultado['resumen_ejecutivo']['espesor_recomendado'])
+                            st.metric("Costo", resultado['resumen_ejecutivo']['costo_estimado'])
+                        with col3:
+                            st.metric("Duración", resultado['resumen_ejecutivo']['duracion_obra'])
+                            st.metric("Vida Útil", resultado['resumen_ejecutivo']['vida_util'])
+                        
+                        # Mostrar archivos generados
+                        st.subheader('📁 Archivos Generados')
+                        for archivo in resultado['archivos_generados']:
+                            st.markdown(f"✅ **{archivo}**")
+                        
+                        # Mostrar conclusiones
+                        st.subheader('💡 Conclusiones')
+                        for conclusion in resultado['conclusiones']:
+                            st.markdown(f"• {conclusion}")
+                        
+                        # Mostrar recomendaciones
+                        st.subheader('📋 Recomendaciones')
+                        for recomendacion in resultado['recomendaciones']:
+                            st.markdown(f"• {recomendacion}")
+                        
+                        # Guardar resultado en session state
+                        st.session_state['caso_practico_resultado'] = resultado
+                        
+                    else:
+                        st.error(f"❌ Error: {resultado['error']}")
+                        
+                except Exception as e:
+                    st.error(f"❌ Error ejecutando caso práctico: {str(e)}")
+        
+        # Mostrar resultado guardado si existe
+        if 'caso_practico_resultado' in st.session_state:
+            st.subheader('📄 Exportar Reporte Completo')
+            
+            if st.button('📄 Generar Reporte PDF Completo', use_container_width=True):
+                try:
+                    with st.spinner('Generando reporte PDF completo...'):
+                        resultado = st.session_state['caso_practico_resultado']
+                        
+                        # Crear datos para PDF
+                        datos_proyecto = {
+                            'Proyecto': resultado['resumen_ejecutivo']['proyecto'],
+                            'Descripción': f"Caso práctico completo - {resultado['resumen_ejecutivo']['ubicacion']}",
+                            'Usuario': st.session_state.get('user', 'Usuario'),
+                            'Sistema_Unidades': 'SI (Internacional)'
+                        }
+                        
+                        # Crear resultados para PDF
+                        resultados_pdf = {
+                            'Tipo Pavimento': resultado['resumen_ejecutivo']['tipo_pavimento_recomendado'],
+                            'Espesor': resultado['resumen_ejecutivo']['espesor_recomendado'],
+                            'Costo Estimado': resultado['resumen_ejecutivo']['costo_estimado'],
+                            'Duración Obra': resultado['resumen_ejecutivo']['duracion_obra'],
+                            'Vida Útil': resultado['resumen_ejecutivo']['vida_util'],
+                            'Ubicación': resultado['resumen_ejecutivo']['ubicacion'],
+                            'Fecha': resultado['fecha_reporte']
+                        }
+                        
+                        pdf_buffer = exportar_pdf_reportlab(datos_proyecto, resultados_pdf)
+                        if pdf_buffer:
+                            st.session_state['pdf_caso_practico'] = pdf_buffer
+                            st.session_state['pdf_caso_practico_filename'] = f"caso_practico_san_miguel_{datetime.now().strftime('%Y%m%d')}.pdf"
+                            st.success("✅ Reporte PDF generado exitosamente!")
+                        else:
+                            st.error("❌ Error al generar PDF")
+                            
+                except Exception as e:
+                    st.error(f"❌ Error: {str(e)}")
+            
+            # Botón de descarga
+            if 'pdf_caso_practico' in st.session_state:
+                st.download_button(
+                    label="📥 Descargar Reporte PDF Completo",
+                    data=st.session_state['pdf_caso_practico'].getvalue(),
+                    file_name=st.session_state['pdf_caso_practico_filename'],
+                    mime="application/pdf",
+                    use_container_width=True
+                )

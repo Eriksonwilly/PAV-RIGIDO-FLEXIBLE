@@ -1376,126 +1376,144 @@ with col_der:
         
         # --- BOTÓN PDF PREMIUM PAVIMENTO RÍGIDO ---
         st.markdown("### 📄 Generar Reporte Premium - Pavimento Rígido")
-        if st.button("🚀 Generar PDF Premium Pavimento Rígido", key="btn_pdf_premium_rigido"):
-            try:
-                # Preparar datos del proyecto
-                datos_proyecto = {
-                    'Proyecto': proyecto if 'proyecto' in locals() else 'Pavimento Rígido - San Miguel',
-                    'Descripción': descripcion if 'descripcion' in locals() else 'Pavimento rígido para vía urbana',
-                    'Período': periodo if 'periodo' in locals() else 20,
-                    'Usuario': st.session_state['user'],
-                    'Sistema_Unidades': sistema_unidades
-                }
-                
-                # Preparar resultados del análisis rígido
-                resultados_rigido = {
-                    'Espesor de losa calculado (D)': f"{D:.2f} {unidad_espesor}",
-                    'Junta máxima (L)': f"{L_junta:.2f} {unidad_longitud}",
-                    'Área de acero por temperatura (As)': f"{As_temp:.2f} {unidad_area}",
-                    'Número de ejes equivalentes (W18)': f"{W18:,.0f}",
-                    'Módulo de reacción (k)': f"{k_analisis} {unidad_k}",
-                    'Resistencia a flexión (Sc)': f"{Sc} {unidad_modulo}",
-                    'Módulo elasticidad (Ec)': f"{Ec_calc:.0f} {unidad_modulo}",
-                    'Coef. transferencia (J)': f"{J}",
-                    'Coef. drenaje (C)': f"{C}",
-                    'Confiabilidad (R)': f"{R}",
-                    'Porcentaje de fatiga': f"{porcentaje_fatiga:.2f}%",
-                    'Porcentaje de erosión': f"{porcentaje_erosion:.2f}%",
-                    'ZR (Factor confiabilidad)': f"{ZR}",
-                    'S0 (Desviación estándar)': f"{S0}",
-                    'ΔPSI (Pérdida servicio)': f"{delta_PSI}"
-                }
-                
-                # Generar PDF premium
-                pdf_buffer = generar_pdf_premium_rigido(datos_proyecto, resultados_rigido, tabla, sistema_unidades)
-                if pdf_buffer:
-                    st.download_button(
-                        label="📥 Descargar PDF Premium Pavimento Rígido",
-                        data=pdf_buffer.getvalue(),
-                        file_name=f"reporte_premium_rigido_{proyecto}.pdf",
-                        mime="application/pdf",
-                        key="btn_download_premium_rigido"
-                    )
-                    st.success("✅ PDF Premium Pavimento Rígido generado exitosamente!")
-                else:
-                    st.error("❌ Error al generar PDF Premium")
-                    
-            except Exception as e:
-                st.error(f"❌ Error: {str(e)}")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("🚀 Generar PDF Premium Pavimento Rígido", key="btn_pdf_premium_rigido", use_container_width=True):
+                try:
+                    with st.spinner("Generando PDF Premium Pavimento Rígido..."):
+                        # Preparar datos del proyecto
+                        datos_proyecto = {
+                            'Proyecto': proyecto if 'proyecto' in locals() else 'Pavimento Rígido - San Miguel',
+                            'Descripción': descripcion if 'descripcion' in locals() else 'Pavimento rígido para vía urbana',
+                            'Período': periodo if 'periodo' in locals() else 20,
+                            'Usuario': st.session_state['user'],
+                            'Sistema_Unidades': sistema_unidades
+                        }
+                        
+                        # Preparar resultados del análisis rígido
+                        resultados_rigido = {
+                            'Espesor de losa calculado (D)': f"{D:.2f} {unidad_espesor}",
+                            'Junta máxima (L)': f"{L_junta:.2f} {unidad_longitud}",
+                            'Área de acero por temperatura (As)': f"{As_temp:.2f} {unidad_area}",
+                            'Número de ejes equivalentes (W18)': f"{W18:,.0f}",
+                            'Módulo de reacción (k)': f"{k_analisis} {unidad_k}",
+                            'Resistencia a flexión (Sc)': f"{Sc} {unidad_modulo}",
+                            'Módulo elasticidad (Ec)': f"{Ec_calc:.0f} {unidad_modulo}",
+                            'Coef. transferencia (J)': f"{J}",
+                            'Coef. drenaje (C)': f"{C}",
+                            'Confiabilidad (R)': f"{R}",
+                            'Porcentaje de fatiga': f"{porcentaje_fatiga:.2f}%",
+                            'Porcentaje de erosión': f"{porcentaje_erosion:.2f}%",
+                            'ZR (Factor confiabilidad)': f"{ZR}",
+                            'S0 (Desviación estándar)': f"{S0}",
+                            'ΔPSI (Pérdida servicio)': f"{delta_PSI}"
+                        }
+                        
+                        # Generar PDF premium
+                        pdf_buffer = generar_pdf_premium_rigido(datos_proyecto, resultados_rigido, tabla, sistema_unidades)
+                        if pdf_buffer:
+                            st.session_state['pdf_premium_rigido'] = pdf_buffer
+                            st.session_state['pdf_premium_rigido_filename'] = f"reporte_premium_rigido_{proyecto}.pdf"
+                            st.success("✅ PDF Premium Pavimento Rígido generado exitosamente!")
+                        else:
+                            st.error("❌ Error al generar PDF Premium")
+                            
+                except Exception as e:
+                    st.error(f"❌ Error: {str(e)}")
+        
+        with col2:
+            if 'pdf_premium_rigido' in st.session_state:
+                st.download_button(
+                    label="📥 Descargar PDF Premium Pavimento Rígido",
+                    data=st.session_state['pdf_premium_rigido'].getvalue(),
+                    file_name=st.session_state['pdf_premium_rigido_filename'],
+                    mime="application/pdf",
+                    key="btn_download_premium_rigido"
+                )
         
         st.divider()
         
         # --- BOTÓN PDF PREMIUM COMBINADO (AMBOS CASOS) ---
         st.markdown("### 📄 Generar Reporte Premium Combinado")
-        if st.button("🚀 Generar PDF Premium Combinado (Rígido + Flexible)", key="btn_pdf_premium_combinado"):
-            try:
-                # Preparar datos del proyecto
-                datos_proyecto = {
-                    'Proyecto': proyecto if 'proyecto' in locals() else 'Análisis Combinado - San Miguel',
-                    'Descripción': descripcion if 'descripcion' in locals() else 'Análisis combinado de pavimentos',
-                    'Período': periodo if 'periodo' in locals() else 20,
-                    'Usuario': st.session_state['user'],
-                    'Sistema_Unidades': sistema_unidades
-                }
-                
-                # Preparar resultados del análisis rígido (ya calculados arriba)
-                resultados_rigido = {
-                    'Espesor de losa calculado (D)': f"{D:.2f} {unidad_espesor}",
-                    'Junta máxima (L)': f"{L_junta:.2f} {unidad_longitud}",
-                    'Área de acero por temperatura (As)': f"{As_temp:.2f} {unidad_area}",
-                    'Número de ejes equivalentes (W18)': f"{W18:,.0f}",
-                    'Módulo de reacción (k)': f"{k_analisis} {unidad_k}",
-                    'Resistencia a flexión (Sc)': f"{Sc} {unidad_modulo}",
-                    'Módulo elasticidad (Ec)': f"{Ec_calc:.0f} {unidad_modulo}",
-                    'Coef. transferencia (J)': f"{J}",
-                    'Coef. drenaje (C)': f"{C}",
-                    'Confiabilidad (R)': f"{R}",
-                    'Porcentaje de fatiga': f"{porcentaje_fatiga:.2f}%",
-                    'Porcentaje de erosión': f"{porcentaje_erosion:.2f}%",
-                    'ZR (Factor confiabilidad)': f"{ZR}",
-                    'S0 (Desviación estándar)': f"{S0}",
-                    'ΔPSI (Pérdida servicio)': f"{delta_PSI}"
-                }
-                
-                # Preparar resultados del análisis flexible (usar session_state si está disponible)
-                if 'resultados_flexible' in st.session_state:
-                    resultados_flexible = st.session_state['resultados_flexible']
-                else:
-                    # Valores por defecto para comparación
-                    resultados_flexible = {
-                        'a₁ (coef. asfalto)': '0.44',
-                        'D₁ (espesor asfalto)': '4.0 pulg',
-                        'a₂ (coef. base)': '0.14',
-                        'D₂ (espesor base)': '8.0 pulg',
-                        'm₂ (factor drenaje base)': '1.0',
-                        'a₃ (coef. subbase)': '0.11',
-                        'D₃ (espesor subbase)': '6.0 pulg',
-                        'm₃ (factor drenaje subbase)': '1.0',
-                        'Número estructural SN': '4.44',
-                        'Fórmula': 'SN = a₁·D₁ + a₂·D₂·m₂ + a₃·D₃·m₃',
-                        'Norma': 'AASHTO 93'
-                    }
-                
-                # Generar PDF premium combinado
-                pdf_buffer = generar_pdf_premium_combinado(datos_proyecto, resultados_rigido, resultados_flexible, tabla, sistema_unidades)
-                if pdf_buffer:
-                    st.download_button(
-                        label="📥 Descargar PDF Premium Combinado",
-                        data=pdf_buffer.getvalue(),
-                        file_name=f"reporte_premium_combinado_{proyecto}.pdf",
-                        mime="application/pdf",
-                        key="btn_download_premium_combinado"
-                    )
-                    st.success("✅ PDF Premium Combinado generado exitosamente!")
-                    if 'resultados_flexible' in st.session_state:
-                        st.info("ℹ️ Se incluyeron los resultados calculados del pavimento flexible.")
-                    else:
-                        st.info("ℹ️ Se usaron valores de referencia para el pavimento flexible. Calcule el pavimento flexible para resultados más precisos.")
-                else:
-                    st.error("❌ Error al generar PDF Premium Combinado")
-                    
-            except Exception as e:
-                st.error(f"❌ Error: {str(e)}")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("🚀 Generar PDF Premium Combinado (Rígido + Flexible)", key="btn_pdf_premium_combinado", use_container_width=True):
+                try:
+                    with st.spinner("Generando PDF Premium Combinado..."):
+                        # Preparar datos del proyecto
+                        datos_proyecto = {
+                            'Proyecto': proyecto if 'proyecto' in locals() else 'Análisis Combinado - San Miguel',
+                            'Descripción': descripcion if 'descripcion' in locals() else 'Análisis combinado de pavimentos',
+                            'Período': periodo if 'periodo' in locals() else 20,
+                            'Usuario': st.session_state['user'],
+                            'Sistema_Unidades': sistema_unidades
+                        }
+                        
+                        # Preparar resultados del análisis rígido (ya calculados arriba)
+                        resultados_rigido = {
+                            'Espesor de losa calculado (D)': f"{D:.2f} {unidad_espesor}",
+                            'Junta máxima (L)': f"{L_junta:.2f} {unidad_longitud}",
+                            'Área de acero por temperatura (As)': f"{As_temp:.2f} {unidad_area}",
+                            'Número de ejes equivalentes (W18)': f"{W18:,.0f}",
+                            'Módulo de reacción (k)': f"{k_analisis} {unidad_k}",
+                            'Resistencia a flexión (Sc)': f"{Sc} {unidad_modulo}",
+                            'Módulo elasticidad (Ec)': f"{Ec_calc:.0f} {unidad_modulo}",
+                            'Coef. transferencia (J)': f"{J}",
+                            'Coef. drenaje (C)': f"{C}",
+                            'Confiabilidad (R)': f"{R}",
+                            'Porcentaje de fatiga': f"{porcentaje_fatiga:.2f}%",
+                            'Porcentaje de erosión': f"{porcentaje_erosion:.2f}%",
+                            'ZR (Factor confiabilidad)': f"{ZR}",
+                            'S0 (Desviación estándar)': f"{S0}",
+                            'ΔPSI (Pérdida servicio)': f"{delta_PSI}"
+                        }
+                        
+                        # Preparar resultados del análisis flexible (usar session_state si está disponible)
+                        if 'resultados_flexible' in st.session_state:
+                            resultados_flexible = st.session_state['resultados_flexible']
+                        else:
+                            # Valores por defecto para comparación
+                            resultados_flexible = {
+                                'a₁ (coef. asfalto)': '0.44',
+                                'D₁ (espesor asfalto)': '4.0 pulg',
+                                'a₂ (coef. base)': '0.14',
+                                'D₂ (espesor base)': '8.0 pulg',
+                                'm₂ (factor drenaje base)': '1.0',
+                                'a₃ (coef. subbase)': '0.11',
+                                'D₃ (espesor subbase)': '6.0 pulg',
+                                'm₃ (factor drenaje subbase)': '1.0',
+                                'Número estructural SN': '4.44',
+                                'Fórmula': 'SN = a₁·D₁ + a₂·D₂·m₂ + a₃·D₃·m₃',
+                                'Norma': 'AASHTO 93'
+                            }
+                        
+                        # Generar PDF premium combinado
+                        pdf_buffer = generar_pdf_premium_combinado(datos_proyecto, resultados_rigido, resultados_flexible, tabla, sistema_unidades)
+                        if pdf_buffer:
+                            st.session_state['pdf_premium_combinado'] = pdf_buffer
+                            st.session_state['pdf_premium_combinado_filename'] = f"reporte_premium_combinado_{proyecto}.pdf"
+                            st.success("✅ PDF Premium Combinado generado exitosamente!")
+                            if 'resultados_flexible' in st.session_state:
+                                st.info("ℹ️ Se incluyeron los resultados calculados del pavimento flexible.")
+                            else:
+                                st.info("ℹ️ Se usaron valores de referencia para el pavimento flexible. Calcule el pavimento flexible para resultados más precisos.")
+                        else:
+                            st.error("❌ Error al generar PDF Premium Combinado")
+                            
+                except Exception as e:
+                    st.error(f"❌ Error: {str(e)}")
+        
+        with col2:
+            if 'pdf_premium_combinado' in st.session_state:
+                st.download_button(
+                    label="📥 Descargar PDF Premium Combinado",
+                    data=st.session_state['pdf_premium_combinado'].getvalue(),
+                    file_name=st.session_state['pdf_premium_combinado_filename'],
+                    mime="application/pdf",
+                    key="btn_download_premium_combinado"
+                )
         
         st.divider()
         # Recomendaciones automáticas según datos
@@ -2009,48 +2027,57 @@ with tabs[1]:
         
         # --- BOTÓN PDF PREMIUM PAVIMENTO FLEXIBLE ---
         st.markdown("### 📄 Generar Reporte Premium - Pavimento Flexible")
-        if st.button("🚀 Generar PDF Premium Pavimento Flexible", key="btn_pdf_premium_flexible"):
-            try:
-                # Preparar datos del proyecto
-                datos_proyecto = {
-                    'Proyecto': proyecto if 'proyecto' in locals() else 'Pavimento Flexible - San Miguel',
-                    'Descripción': descripcion if 'descripcion' in locals() else 'Pavimento flexible para vía urbana',
-                    'Período': periodo if 'periodo' in locals() else 20,
-                    'Usuario': st.session_state['user'],
-                    'Sistema_Unidades': sistema_unidades
-                }
-                
-                # Preparar resultados del análisis flexible
-                resultados_flexible = {
-                    'a₁ (coef. asfalto)': f'{a1:.2f}',
-                    'D₁ (espesor asfalto)': f'{D1:.1f} pulg',
-                    'a₂ (coef. base)': f'{a2:.2f}',
-                    'D₂ (espesor base)': f'{D2:.1f} pulg',
-                    'm₂ (factor drenaje base)': f'{m2:.2f}',
-                    'a₃ (coef. subbase)': f'{a3:.2f}',
-                    'D₃ (espesor subbase)': f'{D3:.1f} pulg',
-                    'm₃ (factor drenaje subbase)': f'{m3:.2f}',
-                    'Número estructural SN': f'{SN:.2f}',
-                    'Fórmula': 'SN = a₁·D₁ + a₂·D₂·m₂ + a₃·D₃·m₃',
-                    'Norma': 'AASHTO 93'
-                }
-                
-                # Generar PDF premium
-                pdf_buffer = generar_pdf_premium_flexible(datos_proyecto, resultados_flexible, sistema_unidades)
-                if pdf_buffer:
-                    st.download_button(
-                        label="📥 Descargar PDF Premium Pavimento Flexible",
-                        data=pdf_buffer.getvalue(),
-                        file_name=f"reporte_premium_flexible_{proyecto}.pdf",
-                        mime="application/pdf",
-                        key="btn_download_premium_flexible"
-                    )
-                    st.success("✅ PDF Premium Pavimento Flexible generado exitosamente!")
-                else:
-                    st.error("❌ Error al generar PDF Premium")
-                    
-            except Exception as e:
-                st.error(f"❌ Error: {str(e)}")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("🚀 Generar PDF Premium Pavimento Flexible", key="btn_pdf_premium_flexible", use_container_width=True):
+                try:
+                    with st.spinner("Generando PDF Premium Pavimento Flexible..."):
+                        # Preparar datos del proyecto
+                        datos_proyecto = {
+                            'Proyecto': proyecto if 'proyecto' in locals() else 'Pavimento Flexible - San Miguel',
+                            'Descripción': descripcion if 'descripcion' in locals() else 'Pavimento flexible para vía urbana',
+                            'Período': periodo if 'periodo' in locals() else 20,
+                            'Usuario': st.session_state['user'],
+                            'Sistema_Unidades': sistema_unidades
+                        }
+                        
+                        # Preparar resultados del análisis flexible
+                        resultados_flexible = {
+                            'a₁ (coef. asfalto)': f'{a1:.2f}',
+                            'D₁ (espesor asfalto)': f'{D1:.1f} pulg',
+                            'a₂ (coef. base)': f'{a2:.2f}',
+                            'D₂ (espesor base)': f'{D2:.1f} pulg',
+                            'm₂ (factor drenaje base)': f'{m2:.2f}',
+                            'a₃ (coef. subbase)': f'{a3:.2f}',
+                            'D₃ (espesor subbase)': f'{D3:.1f} pulg',
+                            'm₃ (factor drenaje subbase)': f'{m3:.2f}',
+                            'Número estructural SN': f'{SN:.2f}',
+                            'Fórmula': 'SN = a₁·D₁ + a₂·D₂·m₂ + a₃·D₃·m₃',
+                            'Norma': 'AASHTO 93'
+                        }
+                        
+                        # Generar PDF premium
+                        pdf_buffer = generar_pdf_premium_flexible(datos_proyecto, resultados_flexible, sistema_unidades)
+                        if pdf_buffer:
+                            st.session_state['pdf_premium_flexible'] = pdf_buffer
+                            st.session_state['pdf_premium_flexible_filename'] = f"reporte_premium_flexible_{proyecto}.pdf"
+                            st.success("✅ PDF Premium Pavimento Flexible generado exitosamente!")
+                        else:
+                            st.error("❌ Error al generar PDF Premium")
+                            
+                except Exception as e:
+                    st.error(f"❌ Error: {str(e)}")
+        
+        with col2:
+            if 'pdf_premium_flexible' in st.session_state:
+                st.download_button(
+                    label="📥 Descargar PDF Premium Pavimento Flexible",
+                    data=st.session_state['pdf_premium_flexible'].getvalue(),
+                    file_name=st.session_state['pdf_premium_flexible_filename'],
+                    mime="application/pdf",
+                    key="btn_download_premium_flexible"
+                )
         
         # Botón exportar PDF
         if st.button('📄 Exportar PDF - Número Estructural'):
@@ -2099,45 +2126,54 @@ with tabs[1]:
         
         # --- BOTÓN PDF PREMIUM FATIGA ASFALTO ---
         st.markdown("### 📄 Generar Reporte Premium - Análisis de Fatiga")
-        if st.button("🚀 Generar PDF Premium Análisis de Fatiga", key="btn_pdf_premium_fatiga"):
-            try:
-                # Preparar datos del proyecto
-                datos_proyecto = {
-                    'Proyecto': proyecto if 'proyecto' in locals() else 'Análisis de Fatiga - San Miguel',
-                    'Descripción': descripcion if 'descripcion' in locals() else 'Análisis de fatiga del asfalto',
-                    'Período': periodo if 'periodo' in locals() else 20,
-                    'Usuario': st.session_state['user'],
-                    'Sistema_Unidades': sistema_unidades
-                }
-                
-                # Preparar resultados del análisis de fatiga
-                resultados_fatiga = {
-                    'k₁ (constante)': f'{k1:.4f}',
-                    'k₂ (exponente εt)': f'{k2:.3f}',
-                    'k₃ (exponente E)': f'{k3:.3f}',
-                    'εt (deformación)': f'{eps_t:.1f} microstrain',
-                    'E (módulo elasticidad)': f'{E:.0f} MPa',
-                    'Nf (ciclos hasta falla)': f'{Nf:,.0f}',
-                    'Fórmula': 'Nf = k₁·(1/εt)^k₂·(1/E)^k₃',
-                    'Método': 'MEPDG (Mechanistic-Empirical Pavement Design Guide)'
-                }
-                
-                # Generar PDF premium
-                pdf_buffer = generar_pdf_premium_flexible(datos_proyecto, resultados_fatiga, sistema_unidades)
-                if pdf_buffer:
-                    st.download_button(
-                        label="📥 Descargar PDF Premium Análisis de Fatiga",
-                        data=pdf_buffer.getvalue(),
-                        file_name=f"reporte_premium_fatiga_{proyecto}.pdf",
-                        mime="application/pdf",
-                        key="btn_download_premium_fatiga"
-                    )
-                    st.success("✅ PDF Premium Análisis de Fatiga generado exitosamente!")
-                else:
-                    st.error("❌ Error al generar PDF Premium")
-                    
-            except Exception as e:
-                st.error(f"❌ Error: {str(e)}")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("🚀 Generar PDF Premium Análisis de Fatiga", key="btn_pdf_premium_fatiga", use_container_width=True):
+                try:
+                    with st.spinner("Generando PDF Premium Análisis de Fatiga..."):
+                        # Preparar datos del proyecto
+                        datos_proyecto = {
+                            'Proyecto': proyecto if 'proyecto' in locals() else 'Análisis de Fatiga - San Miguel',
+                            'Descripción': descripcion if 'descripcion' in locals() else 'Análisis de fatiga del asfalto',
+                            'Período': periodo if 'periodo' in locals() else 20,
+                            'Usuario': st.session_state['user'],
+                            'Sistema_Unidades': sistema_unidades
+                        }
+                        
+                        # Preparar resultados del análisis de fatiga
+                        resultados_fatiga = {
+                            'k₁ (constante)': f'{k1:.4f}',
+                            'k₂ (exponente εt)': f'{k2:.3f}',
+                            'k₃ (exponente E)': f'{k3:.3f}',
+                            'εt (deformación)': f'{eps_t:.1f} microstrain',
+                            'E (módulo elasticidad)': f'{E:.0f} MPa',
+                            'Nf (ciclos hasta falla)': f'{Nf:,.0f}',
+                            'Fórmula': 'Nf = k₁·(1/εt)^k₂·(1/E)^k₃',
+                            'Método': 'MEPDG (Mechanistic-Empirical Pavement Design Guide)'
+                        }
+                        
+                        # Generar PDF premium
+                        pdf_buffer = generar_pdf_premium_flexible(datos_proyecto, resultados_fatiga, sistema_unidades)
+                        if pdf_buffer:
+                            st.session_state['pdf_premium_fatiga'] = pdf_buffer
+                            st.session_state['pdf_premium_fatiga_filename'] = f"reporte_premium_fatiga_{proyecto}.pdf"
+                            st.success("✅ PDF Premium Análisis de Fatiga generado exitosamente!")
+                        else:
+                            st.error("❌ Error al generar PDF Premium")
+                            
+                except Exception as e:
+                    st.error(f"❌ Error: {str(e)}")
+        
+        with col2:
+            if 'pdf_premium_fatiga' in st.session_state:
+                st.download_button(
+                    label="📥 Descargar PDF Premium Análisis de Fatiga",
+                    data=st.session_state['pdf_premium_fatiga'].getvalue(),
+                    file_name=st.session_state['pdf_premium_fatiga_filename'],
+                    mime="application/pdf",
+                    key="btn_download_premium_fatiga"
+                )
         
         # Botón exportar PDF
         if st.button('📄 Exportar PDF - Fatiga del Asfalto'):

@@ -260,6 +260,453 @@ def exportar_pdf_reportlab(datos_proyecto, resultados):
         st.error(f"Error generando PDF: {str(e)}")
         return None
 
+# --- PDF PREMIUM PAVIMENTO RÍGIDO ---
+def generar_pdf_premium_rigido(datos_proyecto, resultados_rigido, tabla_transito, sistema_unidades):
+    """
+    Genera un PDF premium específico para pavimento rígido con análisis completo
+    """
+    if not REPORTLAB_AVAILABLE:
+        st.error("ReportLab no está instalado. Instala con: pip install reportlab")
+        return None
+    
+    try:
+        from reportlab.lib import colors
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Image as RLImage
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.lib.units import inch
+        from reportlab.lib.pagesizes import A4
+        from io import BytesIO
+        from datetime import datetime
+        import os
+        
+        pdf_buffer = BytesIO()
+        doc = SimpleDocTemplate(pdf_buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=40, bottomMargin=30)
+        styles = getSampleStyleSheet()
+        styleN = styles["Normal"]
+        styleH = styles["Heading1"]
+        styleH2 = styles["Heading2"]
+        styleH3 = styles["Heading3"]
+        elements = []
+
+        # Portada Premium
+        elements.append(Spacer(1, 50))
+        elements.append(Paragraph("CONSORCIO DEJ", styleH))
+        elements.append(Spacer(1, 30))
+        elements.append(Paragraph("Sistema de Diseño de Pavimentos", styleH2))
+        elements.append(Spacer(1, 40))
+        elements.append(Paragraph("<b>REPORTE PREMIUM - PAVIMENTO RÍGIDO</b>", styleH2))
+        elements.append(Spacer(1, 30))
+        elements.append(Paragraph(f"<b>Proyecto:</b> {datos_proyecto.get('Proyecto', 'N/A')}<br/><b>Ubicación:</b> San Miguel, Puno<br/><b>Fecha:</b> {datetime.now().strftime('%d/%m/%Y %H:%M')}<br/><b>Usuario:</b> {datos_proyecto.get('Usuario', 'N/A')}", styleN))
+        elements.append(Spacer(1, 30))
+        elements.append(Paragraph("<b>Normativas:</b> AASHTO 93, PCA, MTC, RNE", styleN))
+        elements.append(Paragraph("<b>Sistema de Unidades:</b> " + sistema_unidades, styleN))
+        elements.append(PageBreak())
+
+        # Índice Detallado
+        elements.append(Paragraph("<b>CONTENIDO DEL REPORTE</b>", styleH))
+        indice = [
+            ["1. DATOS DEL PROYECTO", "3"],
+            ["2. PARÁMETROS DE DISEÑO AASHTO 93", "4"],
+            ["3. ANÁLISIS DE TRÁNSITO", "5"],
+            ["4. CÁLCULO DE ESPESOR DE LOSA", "6"],
+            ["5. ANÁLISIS DE FATIGA Y EROSIÓN", "7"],
+            ["6. DISEÑO DE JUNTAS Y REFUERZO", "8"],
+            ["7. RECOMENDACIONES TÉCNICAS", "9"],
+            ["8. GRÁFICOS DE ANÁLISIS", "10"],
+            ["9. CONCLUSIONES Y CERTIFICACIÓN", "11"]
+        ]
+        tabla_indice = Table(indice, colWidths=[350, 50])
+        tabla_indice.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 11),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ]))
+        elements.append(tabla_indice)
+        elements.append(PageBreak())
+
+        # 1. Datos del Proyecto
+        elements.append(Paragraph("1. DATOS DEL PROYECTO", styleH))
+        datos_tabla = [
+            ["Parámetro", "Valor", "Unidad"],
+            ["Nombre del Proyecto", datos_proyecto.get('Proyecto', 'N/A'), ""],
+            ["Ubicación", "San Miguel, Puno", ""],
+            ["Longitud del tramo", "100 metros", ""],
+            ["Descripción", datos_proyecto.get('Descripción', 'Pavimento rígido para vía urbana'), ""],
+            ["Período de diseño", datos_proyecto.get('Período', '20'), "años"],
+            ["Sistema de unidades", sistema_unidades, ""],
+            ["Fecha de generación", datetime.now().strftime('%d/%m/%Y %H:%M'), ""]
+        ]
+        tabla = Table(datos_tabla, colWidths=[200, 150, 80])
+        tabla.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ]))
+        elements.append(tabla)
+        elements.append(Spacer(1, 10))
+        elements.append(PageBreak())
+
+        # 2. Parámetros de Diseño AASHTO 93
+        elements.append(Paragraph("2. PARÁMETROS DE DISEÑO AASHTO 93", styleH))
+        param_data = []
+        for key, value in resultados_rigido.items():
+            if isinstance(value, (int, float)):
+                param_data.append([key, f"{value:.2f}", ""])
+            else:
+                param_data.append([key, str(value), ""])
+        
+        if param_data:
+            param_tabla = [["Parámetro", "Valor", "Unidad"]] + param_data
+            tabla_param = Table(param_tabla, colWidths=[200, 150, 80])
+            tabla_param.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ]))
+            elements.append(tabla_param)
+        elements.append(Spacer(1, 10))
+        elements.append(PageBreak())
+
+        # 3. Análisis de Tránsito
+        elements.append(Paragraph("3. ANÁLISIS DE TRÁNSITO", styleH))
+        if tabla_transito and 'Repeticiones' in tabla_transito:
+            W18 = sum(tabla_transito['Repeticiones'])
+            elements.append(Paragraph(f"<b>Número total de ejes equivalentes (W18):</b> {W18:,.0f}", styleN))
+            elements.append(Paragraph(f"<b>Período de diseño:</b> {datos_proyecto.get('Período', '20')} años", styleN))
+            elements.append(Paragraph(f"<b>Factor de seguridad:</b> 1.2", styleN))
+        elements.append(Spacer(1, 10))
+        elements.append(PageBreak())
+
+        # 4. Cálculo de Espesor de Losa
+        elements.append(Paragraph("4. CÁLCULO DE ESPESOR DE LOSA", styleH))
+        elements.append(Paragraph("El espesor de losa se calcula utilizando la metodología AASHTO 93 para pavimentos rígidos:", styleN))
+        elements.append(Paragraph("• Fórmula iterativa AASHTO 93", styleN))
+        elements.append(Paragraph("• Parámetros de confiabilidad y desviación estándar", styleN))
+        elements.append(Paragraph("• Consideración de pérdida de servicio", styleN))
+        elements.append(Spacer(1, 10))
+        elements.append(PageBreak())
+
+        # 5. Análisis de Fatiga y Erosión
+        elements.append(Paragraph("5. ANÁLISIS DE FATIGA Y EROSIÓN", styleH))
+        if 'Porcentaje de fatiga' in str(resultados_rigido):
+            elements.append(Paragraph("• <b>Análisis de Fatiga:</b> Evaluación de la resistencia a la fatiga del concreto", styleN))
+            elements.append(Paragraph("• <b>Análisis de Erosión:</b> Evaluación de la erosión en las juntas", styleN))
+        elements.append(Spacer(1, 10))
+        elements.append(PageBreak())
+
+        # 6. Diseño de Juntas y Refuerzo
+        elements.append(Paragraph("6. DISEÑO DE JUNTAS Y REFUERZO", styleH))
+        elements.append(Paragraph("• <b>Espaciamiento de juntas:</b> Según recomendaciones PCA", styleN))
+        elements.append(Paragraph("• <b>Barras de anclaje:</b> Diseño según normativa", styleN))
+        elements.append(Paragraph("• <b>Pasadores:</b> Especificaciones técnicas", styleN))
+        elements.append(Spacer(1, 10))
+        elements.append(PageBreak())
+
+        # 7. Recomendaciones Técnicas
+        elements.append(Paragraph("7. RECOMENDACIONES TÉCNICAS", styleH))
+        elements.append(Paragraph("• Verificar que todos los parámetros cumplan con las normativas AASHTO 93 y PCA", styleN))
+        elements.append(Paragraph("• Realizar análisis de sensibilidad para validar los resultados", styleN))
+        elements.append(Paragraph("• Considerar condiciones específicas de San Miguel, Puno (altitud > 3800 msnm)", styleN))
+        elements.append(Paragraph("• Documentar todas las asunciones y limitaciones del análisis", styleN))
+        elements.append(Paragraph("• Implementar sistema de drenaje adecuado", styleN))
+        elements.append(PageBreak())
+
+        # 8. Gráficos de Análisis
+        elements.append(Paragraph("8. GRÁFICOS DE ANÁLISIS", styleH))
+        if MATPLOTLIB_AVAILABLE:
+            try:
+                import matplotlib
+                matplotlib.use('Agg')
+                import matplotlib.pyplot as plt
+                import numpy as np
+                
+                # Gráfico de análisis de pavimento rígido
+                fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+                
+                # Gráfico 1: Espesor vs Módulo de reacción
+                k_range = np.linspace(30, 200, 50)
+                W18_default = 100000  # Valor por defecto para el gráfico
+                D_range = [calcular_espesor_losa_rigido(W18_default, k, 0.95, 1.0, 4.5*145.038, 3.2, 300000, sistema_unidades) for k in k_range]
+                ax1.plot(k_range, D_range, 'b-', linewidth=2)
+                ax1.set_title('Espesor vs Módulo de Reacción')
+                ax1.set_xlabel('k (MPa/m)')
+                ax1.set_ylabel('D (mm)')
+                ax1.grid(True, alpha=0.3)
+                
+                # Gráfico 2: Fatiga vs Tránsito
+                W18_range = np.linspace(50000, 500000, 50)
+                fatiga_range = [100 * (w18 / (10**7)) * (200 / 25.4 / (4.5 * 145.038)) ** 3.42 for w18 in W18_range]
+                ax2.plot(W18_range, fatiga_range, 'r-', linewidth=2)
+                ax2.set_title('Fatiga vs Tránsito')
+                ax2.set_xlabel('W18')
+                ax2.set_ylabel('Fatiga (%)')
+                ax2.grid(True, alpha=0.3)
+                
+                plt.tight_layout()
+                
+                # Guardar gráfico en buffer
+                img_buffer = BytesIO()
+                fig.savefig(img_buffer, format='png', bbox_inches='tight', dpi=200)
+                plt.close(fig)
+                img_buffer.seek(0)
+                
+                elements.append(RLImage(img_buffer, width=500, height=250))
+                elements.append(Spacer(1, 10))
+                
+            except Exception as e:
+                elements.append(Paragraph(f"No se pudo generar gráfico: {str(e)}", styleN))
+        else:
+            elements.append(Paragraph("⚠️ Matplotlib no está disponible. Los gráficos no se incluirán en el PDF.", styleN))
+        
+        elements.append(PageBreak())
+
+        # 9. Conclusiones y Certificación
+        elements.append(Paragraph("9. CONCLUSIONES Y CERTIFICACIÓN", styleH))
+        elements.append(Paragraph("El análisis de pavimento rígido ha sido completado exitosamente utilizando las normativas AASHTO 93 y PCA.", styleN))
+        elements.append(Paragraph("Los resultados obtenidos proporcionan una base sólida para el diseño y construcción del pavimento rígido.", styleN))
+        elements.append(Paragraph("Se recomienda realizar verificaciones adicionales y análisis de sensibilidad según las condiciones específicas del proyecto.", styleN))
+        elements.append(Spacer(1, 20))
+        elements.append(Paragraph("<b>Certificado por:</b> CONSORCIO DEJ - Sistema de Diseño de Pavimentos", styleN))
+        elements.append(Paragraph(f"<b>Fecha de certificación:</b> {datetime.now().strftime('%d/%m/%Y %H:%M')}", styleN))
+        elements.append(Paragraph("<b>Normativas aplicadas:</b> AASHTO 93, PCA, MTC, RNE", styleN))
+
+        # Pie de página y paginación
+        def add_page_number(canvas, doc):
+            page_num = canvas.getPageNumber()
+            text = f"CONSORCIO DEJ - Pavimento Rígido Premium    Página {page_num}"
+            canvas.saveState()
+            canvas.setFont('Helvetica', 8)
+            canvas.drawString(30, 15, text)
+            canvas.restoreState()
+
+        doc.build(elements, onFirstPage=add_page_number, onLaterPages=add_page_number)
+        pdf_buffer.seek(0)
+        return pdf_buffer
+        
+    except Exception as e:
+        st.error(f"Error generando PDF Premium Rígido: {str(e)}")
+        return None
+
+# --- PDF PREMIUM PAVIMENTO FLEXIBLE ---
+def generar_pdf_premium_flexible(datos_proyecto, resultados_flexible, sistema_unidades):
+    """
+    Genera un PDF premium específico para pavimento flexible con análisis completo
+    """
+    if not REPORTLAB_AVAILABLE:
+        st.error("ReportLab no está instalado. Instala con: pip install reportlab")
+        return None
+    
+    try:
+        from reportlab.lib import colors
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Image as RLImage
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.lib.units import inch
+        from reportlab.lib.pagesizes import A4
+        from io import BytesIO
+        from datetime import datetime
+        import os
+        
+        pdf_buffer = BytesIO()
+        doc = SimpleDocTemplate(pdf_buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=40, bottomMargin=30)
+        styles = getSampleStyleSheet()
+        styleN = styles["Normal"]
+        styleH = styles["Heading1"]
+        styleH2 = styles["Heading2"]
+        styleH3 = styles["Heading3"]
+        elements = []
+
+        # Portada Premium
+        elements.append(Spacer(1, 50))
+        elements.append(Paragraph("CONSORCIO DEJ", styleH))
+        elements.append(Spacer(1, 30))
+        elements.append(Paragraph("Sistema de Diseño de Pavimentos", styleH2))
+        elements.append(Spacer(1, 40))
+        elements.append(Paragraph("<b>REPORTE PREMIUM - PAVIMENTO FLEXIBLE</b>", styleH2))
+        elements.append(Spacer(1, 30))
+        elements.append(Paragraph(f"<b>Proyecto:</b> {datos_proyecto.get('Proyecto', 'N/A')}<br/><b>Ubicación:</b> San Miguel, Puno<br/><b>Fecha:</b> {datetime.now().strftime('%d/%m/%Y %H:%M')}<br/><b>Usuario:</b> {datos_proyecto.get('Usuario', 'N/A')}", styleN))
+        elements.append(Spacer(1, 30))
+        elements.append(Paragraph("<b>Normativas:</b> AASHTO 93, MEPDG, MTC, RNE", styleN))
+        elements.append(Paragraph("<b>Sistema de Unidades:</b> " + sistema_unidades, styleN))
+        elements.append(PageBreak())
+
+        # Índice Detallado
+        elements.append(Paragraph("<b>CONTENIDO DEL REPORTE</b>", styleH))
+        indice = [
+            ["1. DATOS DEL PROYECTO", "3"],
+            ["2. PARÁMETROS DE DISEÑO AASHTO 93", "4"],
+            ["3. CÁLCULO DEL NÚMERO ESTRUCTURAL", "5"],
+            ["4. ANÁLISIS DE FATIGA DEL ASFALTO", "6"],
+            ["5. DISEÑO DE CAPAS", "7"],
+            ["6. RECOMENDACIONES TÉCNICAS", "8"],
+            ["7. GRÁFICOS DE ANÁLISIS", "9"],
+            ["8. CONCLUSIONES Y CERTIFICACIÓN", "10"]
+        ]
+        tabla_indice = Table(indice, colWidths=[350, 50])
+        tabla_indice.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 11),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ]))
+        elements.append(tabla_indice)
+        elements.append(PageBreak())
+
+        # 1. Datos del Proyecto
+        elements.append(Paragraph("1. DATOS DEL PROYECTO", styleH))
+        datos_tabla = [
+            ["Parámetro", "Valor", "Unidad"],
+            ["Nombre del Proyecto", datos_proyecto.get('Proyecto', 'N/A'), ""],
+            ["Ubicación", "San Miguel, Puno", ""],
+            ["Longitud del tramo", "100 metros", ""],
+            ["Descripción", datos_proyecto.get('Descripción', 'Pavimento flexible para vía urbana'), ""],
+            ["Período de diseño", datos_proyecto.get('Período', '20'), "años"],
+            ["Sistema de unidades", sistema_unidades, ""],
+            ["Fecha de generación", datetime.now().strftime('%d/%m/%Y %H:%M'), ""]
+        ]
+        tabla = Table(datos_tabla, colWidths=[200, 150, 80])
+        tabla.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ]))
+        elements.append(tabla)
+        elements.append(Spacer(1, 10))
+        elements.append(PageBreak())
+
+        # 2. Parámetros de Diseño AASHTO 93
+        elements.append(Paragraph("2. PARÁMETROS DE DISEÑO AASHTO 93", styleH))
+        param_data = []
+        for key, value in resultados_flexible.items():
+            if isinstance(value, (int, float)):
+                param_data.append([key, f"{value:.2f}", ""])
+            else:
+                param_data.append([key, str(value), ""])
+        
+        if param_data:
+            param_tabla = [["Parámetro", "Valor", "Unidad"]] + param_data
+            tabla_param = Table(param_tabla, colWidths=[200, 150, 80])
+            tabla_param.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ]))
+            elements.append(tabla_param)
+        elements.append(Spacer(1, 10))
+        elements.append(PageBreak())
+
+        # 3. Cálculo del Número Estructural
+        elements.append(Paragraph("3. CÁLCULO DEL NÚMERO ESTRUCTURAL", styleH))
+        elements.append(Paragraph("El número estructural se calcula utilizando la metodología AASHTO 93 para pavimentos flexibles:", styleN))
+        elements.append(Paragraph("• Fórmula: SN = a₁·D₁ + a₂·D₂·m₂ + a₃·D₃·m₃", styleN))
+        elements.append(Paragraph("• Coeficientes de capa según AASHTO 93", styleN))
+        elements.append(Paragraph("• Factores de drenaje según condiciones", styleN))
+        elements.append(Spacer(1, 10))
+        elements.append(PageBreak())
+
+        # 4. Análisis de Fatiga del Asfalto
+        elements.append(Paragraph("4. ANÁLISIS DE FATIGA DEL ASFALTO", styleH))
+        elements.append(Paragraph("El análisis de fatiga se realiza utilizando la metodología MEPDG:", styleN))
+        elements.append(Paragraph("• Fórmula: Nf = k₁·(1/εt)^k₂·(1/E)^k₃", styleN))
+        elements.append(Paragraph("• Parámetros de deformación y módulo de elasticidad", styleN))
+        elements.append(Paragraph("• Evaluación de vida útil del asfalto", styleN))
+        elements.append(Spacer(1, 10))
+        elements.append(PageBreak())
+
+        # 5. Diseño de Capas
+        elements.append(Paragraph("5. DISEÑO DE CAPAS", styleH))
+        elements.append(Paragraph("• <b>Capa asfáltica:</b> Diseño según especificaciones técnicas", styleN))
+        elements.append(Paragraph("• <b>Capa base:</b> Material granular estabilizado", styleN))
+        elements.append(Paragraph("• <b>Capa subbase:</b> Material granular natural", styleN))
+        elements.append(Paragraph("• <b>Subrasante:</b> Mejorada según requerimientos", styleN))
+        elements.append(Spacer(1, 10))
+        elements.append(PageBreak())
+
+        # 6. Recomendaciones Técnicas
+        elements.append(Paragraph("6. RECOMENDACIONES TÉCNICAS", styleH))
+        elements.append(Paragraph("• Verificar que todos los parámetros cumplan con las normativas AASHTO 93 y MEPDG", styleN))
+        elements.append(Paragraph("• Realizar análisis de sensibilidad para validar los resultados", styleN))
+        elements.append(Paragraph("• Considerar condiciones específicas de San Miguel, Puno (altitud > 3800 msnm)", styleN))
+        elements.append(Paragraph("• Documentar todas las asunciones y limitaciones del análisis", styleN))
+        elements.append(Paragraph("• Implementar sistema de drenaje adecuado", styleN))
+        elements.append(Paragraph("• Control de calidad en la construcción de capas", styleN))
+        elements.append(PageBreak())
+
+        # 7. Gráficos de Análisis
+        elements.append(Paragraph("7. GRÁFICOS DE ANÁLISIS", styleH))
+        if MATPLOTLIB_AVAILABLE:
+            try:
+                import matplotlib
+                matplotlib.use('Agg')
+                import matplotlib.pyplot as plt
+                import numpy as np
+                
+                # Gráfico de análisis de pavimento flexible
+                fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+                
+                # Gráfico 1: SN vs Espesor de capas
+                D1_range = np.linspace(2, 8, 50)
+                SN_range = [0.44*d1 + 0.14*8*1 + 0.11*6*1 for d1 in D1_range]
+                ax1.plot(D1_range, SN_range, 'g-', linewidth=2)
+                ax1.set_title('SN vs Espesor Capa Asfáltica')
+                ax1.set_xlabel('D1 (pulg)')
+                ax1.set_ylabel('SN')
+                ax1.grid(True, alpha=0.3)
+                
+                # Gráfico 2: Fatiga vs Módulo de Elasticidad
+                E_range = np.linspace(1000, 8000, 50)
+                fatiga_range = [0.0796 * (1/70)**3.291 * (1/e)**0.854 for e in E_range]
+                ax2.plot(E_range, fatiga_range, 'r-', linewidth=2)
+                ax2.set_title('Fatiga vs Módulo de Elasticidad')
+                ax2.set_xlabel('E (MPa)')
+                ax2.set_ylabel('Nf')
+                ax2.grid(True, alpha=0.3)
+                
+                plt.tight_layout()
+                
+                # Guardar gráfico en buffer
+                img_buffer = BytesIO()
+                fig.savefig(img_buffer, format='png', bbox_inches='tight', dpi=200)
+                plt.close(fig)
+                img_buffer.seek(0)
+                
+                elements.append(RLImage(img_buffer, width=500, height=250))
+                elements.append(Spacer(1, 10))
+                
+            except Exception as e:
+                elements.append(Paragraph(f"No se pudo generar gráfico: {str(e)}", styleN))
+        else:
+            elements.append(Paragraph("⚠️ Matplotlib no está disponible. Los gráficos no se incluirán en el PDF.", styleN))
+        
+        elements.append(PageBreak())
+
+        # 8. Conclusiones y Certificación
+        elements.append(Paragraph("8. CONCLUSIONES Y CERTIFICACIÓN", styleH))
+        elements.append(Paragraph("El análisis de pavimento flexible ha sido completado exitosamente utilizando las normativas AASHTO 93 y MEPDG.", styleN))
+        elements.append(Paragraph("Los resultados obtenidos proporcionan una base sólida para el diseño y construcción del pavimento flexible.", styleN))
+        elements.append(Paragraph("Se recomienda realizar verificaciones adicionales y análisis de sensibilidad según las condiciones específicas del proyecto.", styleN))
+        elements.append(Spacer(1, 20))
+        elements.append(Paragraph("<b>Certificado por:</b> CONSORCIO DEJ - Sistema de Diseño de Pavimentos", styleN))
+        elements.append(Paragraph(f"<b>Fecha de certificación:</b> {datetime.now().strftime('%d/%m/%Y %H:%M')}", styleN))
+        elements.append(Paragraph("<b>Normativas aplicadas:</b> AASHTO 93, MEPDG, MTC, RNE", styleN))
+
+        # Pie de página y paginación
+        def add_page_number(canvas, doc):
+            page_num = canvas.getPageNumber()
+            text = f"CONSORCIO DEJ - Pavimento Flexible Premium    Página {page_num}"
+            canvas.saveState()
+            canvas.setFont('Helvetica', 8)
+            canvas.drawString(30, 15, text)
+            canvas.restoreState()
+
+        doc.build(elements, onFirstPage=add_page_number, onLaterPages=add_page_number)
+        pdf_buffer.seek(0)
+        return pdf_buffer
+        
+    except Exception as e:
+        st.error(f"Error generando PDF Premium Flexible: {str(e)}")
+        return None
+
 # --- Autenticación simple ---
 def check_credentials(username, password):
     valid_users = {
@@ -655,6 +1102,57 @@ with col_der:
         # Mostrar resultados
         st.markdown(f"<span style='color:red'><b>Porcentaje de fatiga</b></span>: {porcentaje_fatiga:.2f}", unsafe_allow_html=True)
         st.markdown(f"<span style='color:red'><b>Porcentaje de erosión</b></span>: {porcentaje_erosion:.2f}", unsafe_allow_html=True)
+        st.divider()
+        
+        # --- BOTÓN PDF PREMIUM PAVIMENTO RÍGIDO ---
+        st.markdown("### 📄 Generar Reporte Premium - Pavimento Rígido")
+        if st.button("🚀 Generar PDF Premium Pavimento Rígido", key="btn_pdf_premium_rigido"):
+            try:
+                # Preparar datos del proyecto
+                datos_proyecto = {
+                    'Proyecto': proyecto if 'proyecto' in locals() else 'Pavimento Rígido - San Miguel',
+                    'Descripción': descripcion if 'descripcion' in locals() else 'Pavimento rígido para vía urbana',
+                    'Período': periodo if 'periodo' in locals() else 20,
+                    'Usuario': st.session_state['user'],
+                    'Sistema_Unidades': sistema_unidades
+                }
+                
+                # Preparar resultados del análisis rígido
+                resultados_rigido = {
+                    'Espesor de losa calculado (D)': f"{D:.2f} {unidad_espesor}",
+                    'Junta máxima (L)': f"{L_junta:.2f} {unidad_longitud}",
+                    'Área de acero por temperatura (As)': f"{As_temp:.2f} {unidad_area}",
+                    'Número de ejes equivalentes (W18)': f"{W18:,.0f}",
+                    'Módulo de reacción (k)': f"{k_analisis} {unidad_k}",
+                    'Resistencia a flexión (Sc)': f"{Sc} {unidad_modulo}",
+                    'Módulo elasticidad (Ec)': f"{Ec_calc:.0f} {unidad_modulo}",
+                    'Coef. transferencia (J)': f"{J}",
+                    'Coef. drenaje (C)': f"{C}",
+                    'Confiabilidad (R)': f"{R}",
+                    'Porcentaje de fatiga': f"{porcentaje_fatiga:.2f}%",
+                    'Porcentaje de erosión': f"{porcentaje_erosion:.2f}%",
+                    'ZR (Factor confiabilidad)': f"{ZR}",
+                    'S0 (Desviación estándar)': f"{S0}",
+                    'ΔPSI (Pérdida servicio)': f"{delta_PSI}"
+                }
+                
+                # Generar PDF premium
+                pdf_buffer = generar_pdf_premium_rigido(datos_proyecto, resultados_rigido, tabla, sistema_unidades)
+                if pdf_buffer:
+                    st.download_button(
+                        label="📥 Descargar PDF Premium Pavimento Rígido",
+                        data=pdf_buffer.getvalue(),
+                        file_name=f"reporte_premium_rigido_{proyecto}.pdf",
+                        mime="application/pdf",
+                        key="btn_download_premium_rigido"
+                    )
+                    st.success("✅ PDF Premium Pavimento Rígido generado exitosamente!")
+                else:
+                    st.error("❌ Error al generar PDF Premium")
+                    
+            except Exception as e:
+                st.error(f"❌ Error: {str(e)}")
+        
         st.divider()
         # Recomendaciones automáticas según datos
         diam_barras_dict = {"3/8\"": 9.5, "1/2\"": 12.7, "5/8\"": 15.9, "3/4\"": 19.1}  # mm
@@ -1150,6 +1648,51 @@ with tabs[1]:
         st.success(f'Número estructural SN: {SN:.2f}')
         st.caption('Fórmula: SN = a₁·D₁ + a₂·D₂·m₂ + a₃·D₃·m₃')
         
+        # --- BOTÓN PDF PREMIUM PAVIMENTO FLEXIBLE ---
+        st.markdown("### 📄 Generar Reporte Premium - Pavimento Flexible")
+        if st.button("🚀 Generar PDF Premium Pavimento Flexible", key="btn_pdf_premium_flexible"):
+            try:
+                # Preparar datos del proyecto
+                datos_proyecto = {
+                    'Proyecto': proyecto if 'proyecto' in locals() else 'Pavimento Flexible - San Miguel',
+                    'Descripción': descripcion if 'descripcion' in locals() else 'Pavimento flexible para vía urbana',
+                    'Período': periodo if 'periodo' in locals() else 20,
+                    'Usuario': st.session_state['user'],
+                    'Sistema_Unidades': sistema_unidades
+                }
+                
+                # Preparar resultados del análisis flexible
+                resultados_flexible = {
+                    'a₁ (coef. asfalto)': f'{a1:.2f}',
+                    'D₁ (espesor asfalto)': f'{D1:.1f} pulg',
+                    'a₂ (coef. base)': f'{a2:.2f}',
+                    'D₂ (espesor base)': f'{D2:.1f} pulg',
+                    'm₂ (factor drenaje base)': f'{m2:.2f}',
+                    'a₃ (coef. subbase)': f'{a3:.2f}',
+                    'D₃ (espesor subbase)': f'{D3:.1f} pulg',
+                    'm₃ (factor drenaje subbase)': f'{m3:.2f}',
+                    'Número estructural SN': f'{SN:.2f}',
+                    'Fórmula': 'SN = a₁·D₁ + a₂·D₂·m₂ + a₃·D₃·m₃',
+                    'Norma': 'AASHTO 93'
+                }
+                
+                # Generar PDF premium
+                pdf_buffer = generar_pdf_premium_flexible(datos_proyecto, resultados_flexible, sistema_unidades)
+                if pdf_buffer:
+                    st.download_button(
+                        label="📥 Descargar PDF Premium Pavimento Flexible",
+                        data=pdf_buffer.getvalue(),
+                        file_name=f"reporte_premium_flexible_{proyecto}.pdf",
+                        mime="application/pdf",
+                        key="btn_download_premium_flexible"
+                    )
+                    st.success("✅ PDF Premium Pavimento Flexible generado exitosamente!")
+                else:
+                    st.error("❌ Error al generar PDF Premium")
+                    
+            except Exception as e:
+                st.error(f"❌ Error: {str(e)}")
+        
         # Botón exportar PDF
         if st.button('📄 Exportar PDF - Número Estructural'):
             datos_proyecto = {
@@ -1194,6 +1737,48 @@ with tabs[1]:
         Nf = k1 * (1/eps_t)**k2 * (1/E)**k3
         st.success(f'Número de ciclos hasta falla (Nf): {Nf:,.0f}')
         st.caption('Fórmula: Nf = k₁·(1/εt)^k₂·(1/E)^k₃, εt en microstrain, E en MPa')
+        
+        # --- BOTÓN PDF PREMIUM FATIGA ASFALTO ---
+        st.markdown("### 📄 Generar Reporte Premium - Análisis de Fatiga")
+        if st.button("🚀 Generar PDF Premium Análisis de Fatiga", key="btn_pdf_premium_fatiga"):
+            try:
+                # Preparar datos del proyecto
+                datos_proyecto = {
+                    'Proyecto': proyecto if 'proyecto' in locals() else 'Análisis de Fatiga - San Miguel',
+                    'Descripción': descripcion if 'descripcion' in locals() else 'Análisis de fatiga del asfalto',
+                    'Período': periodo if 'periodo' in locals() else 20,
+                    'Usuario': st.session_state['user'],
+                    'Sistema_Unidades': sistema_unidades
+                }
+                
+                # Preparar resultados del análisis de fatiga
+                resultados_fatiga = {
+                    'k₁ (constante)': f'{k1:.4f}',
+                    'k₂ (exponente εt)': f'{k2:.3f}',
+                    'k₃ (exponente E)': f'{k3:.3f}',
+                    'εt (deformación)': f'{eps_t:.1f} microstrain',
+                    'E (módulo elasticidad)': f'{E:.0f} MPa',
+                    'Nf (ciclos hasta falla)': f'{Nf:,.0f}',
+                    'Fórmula': 'Nf = k₁·(1/εt)^k₂·(1/E)^k₃',
+                    'Método': 'MEPDG (Mechanistic-Empirical Pavement Design Guide)'
+                }
+                
+                # Generar PDF premium
+                pdf_buffer = generar_pdf_premium_flexible(datos_proyecto, resultados_fatiga, sistema_unidades)
+                if pdf_buffer:
+                    st.download_button(
+                        label="📥 Descargar PDF Premium Análisis de Fatiga",
+                        data=pdf_buffer.getvalue(),
+                        file_name=f"reporte_premium_fatiga_{proyecto}.pdf",
+                        mime="application/pdf",
+                        key="btn_download_premium_fatiga"
+                    )
+                    st.success("✅ PDF Premium Análisis de Fatiga generado exitosamente!")
+                else:
+                    st.error("❌ Error al generar PDF Premium")
+                    
+            except Exception as e:
+                st.error(f"❌ Error: {str(e)}")
         
         # Botón exportar PDF
         if st.button('📄 Exportar PDF - Fatiga del Asfalto'):

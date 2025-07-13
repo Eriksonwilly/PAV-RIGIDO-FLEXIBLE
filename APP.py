@@ -1139,30 +1139,92 @@ with col_centro:
     st.divider()
 
 # --- FUNCIONES DE CÁLCULO CORREGIDAS ---
-def calcular_espesor_losa_rigido(W18, k, R, C, Sc, J, Ec, sistema_unidades):
+def calcular_pavimento_rigido_completo(k_30MPa, ESALs, f_c=28, j=3.2, modulo_rotura=4.5, sistema_unidades="Sistema Internacional (SI)"):
     """
-    Calcula el espesor de losa de pavimento rígido según AASHTO 93
-    Parámetros corregidos para resultados realistas
+    MÓDULO ACTUALIZADO: Pavimento Rígido - Método PCA + AASHTO 93
+    
+    Parámetros:
+    - k_30MPa: Módulo de reacción de subrasante (Perú: 30-150 MPa/m)
+    - ESALs: Ejes equivalentes de 18 kips
+    - f_c: Resistencia del concreto (MPa) - Norma E.060
+    - j: Coef. transferencia carga (j=3.2 para pasadores)
+    - modulo_rotura: MR (MPa) - Típico 4.5 MPa (Concreto NP 350)
     """
+    import math
+    
     try:
-        # Limitar W18 a valores realistas
-        W18_lim = min(W18, 1000000)  # Máximo 1 millón de ESALs
+        # Validación según MTC 2023
+        if k_30MPa < 20:
+            raise ValueError("¡Error! k < 20 MPa/m: Requiere estabilización de subrasante (MTC 2023).")
         
-        # Usar la función AASHTO 93 corregida
-        ZR = -1.645  # Factor de confiabilidad estándar para 95%
-        S0 = 0.35   # Desviación estándar
-        delta_PSI = 1.5  # Pérdida de servicio
-        D = calcular_espesor_losa_AASHTO93(W18_lim, ZR, S0, delta_PSI, Sc, J, k, C)
+        # Limitar ESALs a valores realistas
+        ESALs_lim = min(ESALs, 1000000)
         
-        # Convertir unidades según el sistema seleccionado
+        # Ecuación PCA (Portland Cement Association) corregida
+        log_esals = math.log10(ESALs_lim) if ESALs_lim > 0 else 0
+        espesor_pulg = (log_esals * 12.5) / ((modulo_rotura ** 0.9) * (k_30MPa ** 0.25))
+        
+        # Conversión de unidades
         if sistema_unidades == "Sistema Internacional (SI)":
-            # Convertir de pulgadas a mm
-            D = D * 25.4
-        # Si es sistema inglés, mantener en pulgadas
+            espesor_cm = espesor_pulg * 2.54
+            espesor_mm = espesor_cm * 10
+            unidad_espesor = "mm"
+        else:
+            espesor_cm = espesor_pulg * 2.54
+            espesor_mm = espesor_cm * 10
+            unidad_espesor = "pulg"
         
-        return D
-    except Exception:
-        return 0
+        # Verificación por fatiga (AASHTO 93)
+        fatiga = (espesor_cm ** 2) * (f_c / (j * k_30MPa ** 0.5))
+        
+        # Cálculo de juntas según DG-2018
+        espaciamiento_juntas = 3 * espesor_cm  # metros
+        
+        # Cálculo de refuerzo
+        if fatiga > 0.45:
+            refuerzo_acero = fatiga * 0.15  # kg/m³
+            tipo_refuerzo = f"Acero G60 @ {refuerzo_acero:.2f} kg/m³"
+        else:
+            refuerzo_acero = 0
+            tipo_refuerzo = "Sin refuerzo"
+        
+        # Análisis de erosión
+        erosion = (ESALs_lim / 1000000) * (espesor_cm / 20) * (50 / k_30MPa)
+        erosion = min(erosion * 100, 100)  # Porcentaje
+        
+        return {
+            "espesor_cm": round(espesor_cm, 2),
+            "espesor_mm": round(espesor_mm, 1),
+            "espesor_pulg": round(espesor_pulg, 2),
+            "unidad_espesor": unidad_espesor,
+            "espaciamiento_juntas": round(espaciamiento_juntas, 2),
+            "tipo_refuerzo": tipo_refuerzo,
+            "refuerzo_acero": refuerzo_acero,
+            "fatiga": round(fatiga, 3),
+            "erosion": round(erosion, 2),
+            "k_modulo": k_30MPa,
+            "f_c": f_c,
+            "modulo_rotura": modulo_rotura,
+            "ESALs": ESALs_lim
+        }
+        
+    except Exception as e:
+        return {
+            "error": str(e),
+            "espesor_cm": 0,
+            "espesor_mm": 0,
+            "espesor_pulg": 0,
+            "unidad_espesor": "mm",
+            "espaciamiento_juntas": 0,
+            "tipo_refuerzo": "Error en cálculo",
+            "refuerzo_acero": 0,
+            "fatiga": 0,
+            "erosion": 0,
+            "k_modulo": k_30MPa,
+            "f_c": f_c,
+            "modulo_rotura": modulo_rotura,
+            "ESALs": ESALs
+        }
 
 def calcular_junta_L(espesor_losa, modulo_rotura, sistema_unidades):
     """
@@ -1878,10 +1940,17 @@ with col_der:
                             f = 1.5  # coef. fricción
                             mu = 1.0  # coef. fricción
                             w = D_actual * 1.0  # peso de losa (simplificado)
-                            L_junta_pdf = calcular_junta_L(sigma_t, gamma_c, f, mu, w, sistema_unidades)
-                            fa = 1.5
-                            fs = acero_fy if 'acero_fy' in locals() else 280
-                            As_temp_pdf = calcular_As_temp(gamma_c, L_junta_pdf, D_actual, fa, fs, sistema_unidades)
+                            # Usar el nuevo módulo para cálculos en PDF
+                            resultados_pdf = calcular_pavimento_rigido_completo(
+                                k_30MPa=k_actual,
+                                ESALs=W18_actual,
+                                f_c=28.0,
+                                j=3.2,
+                                modulo_rotura=Sc_actual,
+                                sistema_unidades=sistema_unidades
+                            )
+                            L_junta_pdf = resultados_pdf["espaciamiento_juntas"]
+                            As_temp_pdf = resultados_pdf["refuerzo_acero"]
                             
                             resultados_data = [
                                 ['Resultados del Análisis', 'Valor', 'Estado'],
@@ -2066,53 +2135,38 @@ with tabs[0]:
     
     if submitted_rigido:
         with st.spinner('🔄 Calculando pavimento rígido...'):
-            # --- CÁLCULOS PAVIMENTO RÍGIDO ---
-            W18_rigido = sum(tabla_rigido['Repeticiones']) if 'Repeticiones' in tabla_rigido else 100000
-            
-            # Calcular k según el tipo de entrada
-            if subrasante_tipo_rigido == "Ingreso directo":
-                k_analisis_rigido = k_val_rigido
-            else:
-                k_analisis_rigido = 10 * cbr_rigido
-            
-            # Parámetros de diseño
-            R_rigido = 0.95  # Confiabilidad
-            C_rigido = 1.0   # Coef. drenaje
-            Sc_rigido = modulo_rotura_rigido  # Resistencia a flexión
-            J_rigido = 3.2   # Coef. transferencia
-            Ec_rigido = 300000  # Módulo elasticidad
-            
-            # Convertir unidades para cálculos internos
-            if sistema_unidades_rigido == "SI (Internacional)":
-                Sc_calc_rigido = Sc_rigido * 145.038
-                k_calc_rigido = k_analisis_rigido * 3.6839
-                Ec_calc_rigido = 30000 * 145.038
-            else:
-                Sc_calc_rigido = Sc_rigido
-                k_calc_rigido = k_analisis_rigido
-                Ec_calc_rigido = Ec_rigido
-            
-            # Calcular espesor de losa
-            D_pulg_rigido = calcular_espesor_losa_AASHTO93(W18_rigido, ZR_rigido, S0_rigido, delta_PSI_rigido, Sc_calc_rigido, J_rigido, k_calc_rigido, C_rigido)
-            
-            if sistema_unidades_rigido == "SI (Internacional)":
-                D_rigido = D_pulg_rigido * 25.4  # mm
-                unidad_espesor_rigido = "mm"
-            else:
-                D_rigido = D_pulg_rigido
-                unidad_espesor_rigido = "pulg"
-            
-            # Calcular juntas (usando función corregida)
-            L_junta_rigido = calcular_junta_L(D_rigido, Sc_rigido, sistema_unidades_rigido)
-            
-            # Calcular refuerzo por temperatura (usando función corregida)
-            As_temp_rigido = calcular_As_temp(D_rigido, L_junta_rigido, acero_fy_rigido, sistema_unidades_rigido)
-            
-            # Calcular fatiga y erosión usando funciones corregidas
-            reps_rigido = sum(tabla_rigido['Repeticiones']) if 'Repeticiones' in tabla_rigido else 0
-            
-            porcentaje_fatiga_rigido = calcular_fatiga_corregida(reps_rigido, D_rigido, modulo_rotura_rigido, periodo_rigido)
-            porcentaje_erosion_rigido = calcular_erosion_corregida(reps_rigido, D_rigido, k_analisis_rigido, periodo_rigido)
+                    # --- CÁLCULOS PAVIMENTO RÍGIDO (MÓDULO ACTUALIZADO) ---
+        ESALs_rigido = sum(tabla_rigido['Repeticiones']) if 'Repeticiones' in tabla_rigido else 100000
+        
+        # Calcular k según el tipo de entrada
+        if subrasante_tipo_rigido == "Ingreso directo":
+            k_analisis_rigido = k_val_rigido
+        else:
+            k_analisis_rigido = 10 * cbr_rigido
+        
+        # Parámetros de diseño según Norma E.060
+        f_c_rigido = 28.0  # Resistencia del concreto (MPa)
+        j_rigido = 3.2     # Coef. transferencia carga (pasadores)
+        modulo_rotura_rigido_calc = modulo_rotura_rigido  # MR (MPa)
+        
+        # Usar el nuevo módulo actualizado
+        resultados_rigido = calcular_pavimento_rigido_completo(
+            k_30MPa=k_analisis_rigido,
+            ESALs=ESALs_rigido,
+            f_c=f_c_rigido,
+            j=j_rigido,
+            modulo_rotura=modulo_rotura_rigido_calc,
+            sistema_unidades=sistema_unidades_rigido
+        )
+        
+        # Extraer resultados
+        D_rigido = resultados_rigido["espesor_mm"] if sistema_unidades_rigido == "SI (Internacional)" else resultados_rigido["espesor_pulg"]
+        unidad_espesor_rigido = resultados_rigido["unidad_espesor"]
+        L_junta_rigido = resultados_rigido["espaciamiento_juntas"]
+        tipo_refuerzo_rigido = resultados_rigido["tipo_refuerzo"]
+        refuerzo_acero_rigido = resultados_rigido["refuerzo_acero"]
+        porcentaje_fatiga_rigido = resultados_rigido["fatiga"] * 100  # Convertir a porcentaje
+        porcentaje_erosion_rigido = resultados_rigido["erosion"]
             
             # Definir unidades según sistema
             if sistema_unidades_rigido == "SI (Internacional)":
@@ -2132,30 +2186,30 @@ with tabs[0]:
             # Métricas principales
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric("Espesor de losa (D)", f"{D_rigido:.2f} {unidad_espesor_rigido}", "Calculado AASHTO 93")
+                st.metric("Espesor de losa (D)", f"{D_rigido:.1f} {unidad_espesor_rigido}", "PCA + AASHTO 93")
             with col2:
-                st.metric("Fatiga (%)", f"{porcentaje_fatiga_rigido:.2f}%", "Análisis PCA")
+                st.metric("Espaciamiento juntas", f"{L_junta_rigido:.2f} m", "DG-2018")
             with col3:
-                st.metric("Erosión (%)", f"{porcentaje_erosion_rigido:.2f}%", "Análisis PCA")
+                st.metric("Refuerzo acero", tipo_refuerzo_rigido, "Norma E.060")
             
             # Resultados detallados
             st.subheader('📊 Resultados Detallados')
             col1, col2 = st.columns(2)
             with col1:
-                st.markdown("**Parámetros de Diseño:**")
-                st.markdown(f"• Espesor de losa calculado: **{D_rigido:.2f} {unidad_espesor_rigido}**")
-                st.markdown(f"• Junta máxima: **{L_junta_rigido:.2f} {unidad_longitud_rigido}**")
-                st.markdown(f"• Área de acero por temperatura: **{As_temp_rigido:.2f} {unidad_area_rigido}**")
-                st.markdown(f"• Número de ejes equivalentes (W18): **{W18_rigido:,.0f}**")
-                st.markdown(f"• Módulo de reacción (k): **{k_analisis_rigido} {unidad_k_rigido}**")
+                st.markdown("**Parámetros de Diseño (Módulo Actualizado):**")
+                st.markdown(f"• Espesor de losa calculado: **{D_rigido:.1f} {unidad_espesor_rigido}**")
+                st.markdown(f"• Espaciamiento de juntas: **{L_junta_rigido:.2f} m**")
+                st.markdown(f"• Tipo de refuerzo: **{tipo_refuerzo_rigido}**")
+                st.markdown(f"• Número de ESALs: **{ESALs_rigido:,.0f}**")
+                st.markdown(f"• Módulo de reacción (k): **{k_analisis_rigido} MPa/m**")
             
             with col2:
                 st.markdown("**Análisis de Resistencia:**")
-                st.markdown(f"• Resistencia a flexión (Sc): **{Sc_rigido} {unidad_modulo_rigido}**")
-                st.markdown(f"• Módulo elasticidad (Ec): **{Ec_calc_rigido:.0f} {unidad_modulo_rigido}**")
-                st.markdown(f"• Coef. transferencia (J): **{J_rigido}**")
-                st.markdown(f"• Coef. drenaje (C): **{C_rigido}**")
-                st.markdown(f"• Confiabilidad (R): **{R_rigido}**")
+                st.markdown(f"• Resistencia del concreto (f'c): **{f_c_rigido} MPa**")
+                st.markdown(f"• Módulo de rotura (MR): **{modulo_rotura_rigido_calc} MPa**")
+                st.markdown(f"• Coef. transferencia (j): **{j_rigido}**")
+                st.markdown(f"• Fatiga calculada: **{porcentaje_fatiga_rigido:.2f}%**")
+                st.markdown(f"• Erosión calculada: **{porcentaje_erosion_rigido:.2f}%**")
             
             # Análisis de sensibilidad
             if MATPLOTLIB_AVAILABLE:
@@ -2171,10 +2225,10 @@ with tabs[0]:
                     Sc_range_rigido = np.linspace(200, 800, 50)
                     W18_range_rigido = np.linspace(50000, 500000, 50)
                     
-                    # Cálculos de sensibilidad
-                    D_k_rigido = [calcular_espesor_losa_rigido(W18_rigido, kx, R_rigido, C_rigido, Sc_rigido, J_rigido, Ec_rigido, sistema_unidades_rigido) for kx in k_range_rigido]
-                    D_Sc_rigido = [calcular_espesor_losa_rigido(W18_rigido, k_analisis_rigido, R_rigido, C_rigido, scx, J_rigido, Ec_rigido, sistema_unidades_rigido) for scx in Sc_range_rigido]
-                    D_W18_rigido = [calcular_espesor_losa_rigido(w18x, k_analisis_rigido, R_rigido, C_rigido, Sc_rigido, J_rigido, Ec_rigido, sistema_unidades_rigido) for w18x in W18_range_rigido]
+                    # Cálculos de sensibilidad usando el nuevo módulo
+                    D_k_rigido = [calcular_pavimento_rigido_completo(kx, ESALs_rigido, f_c_rigido, j_rigido, modulo_rotura_rigido_calc, sistema_unidades_rigido)["espesor_mm"] for kx in k_range_rigido]
+                    D_Sc_rigido = [calcular_pavimento_rigido_completo(k_analisis_rigido, ESALs_rigido, f_c_rigido, j_rigido, scx, sistema_unidades_rigido)["espesor_mm"] for scx in Sc_range_rigido]
+                    D_W18_rigido = [calcular_pavimento_rigido_completo(k_analisis_rigido, w18x, f_c_rigido, j_rigido, modulo_rotura_rigido_calc, sistema_unidades_rigido)["espesor_mm"] for w18x in W18_range_rigido]
                     
                     # Gráfico de sensibilidad
                     fig_sens_rigido, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
@@ -2183,26 +2237,26 @@ with tabs[0]:
                     ax1.plot(k_range_rigido, D_k_rigido, color='blue', linewidth=2)
                     ax1.axvline(x=k_analisis_rigido, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {k_analisis_rigido}')
                     ax1.set_title('Espesor vs Módulo de reacción (k)', fontsize=12, fontweight='bold')
-                    ax1.set_xlabel('Módulo de reacción k (pci)')
-                    ax1.set_ylabel('Espesor de losa D (pulg)')
+                    ax1.set_xlabel('Módulo de reacción k (MPa/m)')
+                    ax1.set_ylabel('Espesor de losa D (mm)')
                     ax1.grid(True, alpha=0.3)
                     ax1.legend()
                     
-                    # D vs Sc
+                    # D vs MR
                     ax2.plot(Sc_range_rigido, D_Sc_rigido, color='green', linewidth=2)
-                    ax2.axvline(x=Sc_rigido, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {Sc_rigido}')
-                    ax2.set_title('Espesor vs Módulo de rotura (Sc)', fontsize=12, fontweight='bold')
-                    ax2.set_xlabel('Módulo de rotura Sc (psi)')
-                    ax2.set_ylabel('Espesor de losa D (pulg)')
+                    ax2.axvline(x=modulo_rotura_rigido_calc, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {modulo_rotura_rigido_calc}')
+                    ax2.set_title('Espesor vs Módulo de rotura (MR)', fontsize=12, fontweight='bold')
+                    ax2.set_xlabel('Módulo de rotura MR (MPa)')
+                    ax2.set_ylabel('Espesor de losa D (mm)')
                     ax2.grid(True, alpha=0.3)
                     ax2.legend()
                     
-                    # D vs W18
+                    # D vs ESALs
                     ax3.plot(W18_range_rigido, D_W18_rigido, color='orange', linewidth=2)
-                    ax3.axvline(x=W18_rigido, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {W18_rigido:,.0f}')
-                    ax3.set_title('Espesor vs Tránsito (W18)', fontsize=12, fontweight='bold')
-                    ax3.set_xlabel('Número de ejes equivalentes W18')
-                    ax3.set_ylabel('Espesor de losa D (pulg)')
+                    ax3.axvline(x=ESALs_rigido, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {ESALs_rigido:,.0f}')
+                    ax3.set_title('Espesor vs Tránsito (ESALs)', fontsize=12, fontweight='bold')
+                    ax3.set_xlabel('Número de ESALs')
+                    ax3.set_ylabel('Espesor de losa D (mm)')
                     ax3.grid(True, alpha=0.3)
                     ax3.legend()
                     
@@ -2256,23 +2310,20 @@ with tabs[0]:
                                 'Sistema_Unidades': sistema_unidades_rigido
                             }
                             
-                            # Preparar resultados del análisis rígido
+                            # Preparar resultados del análisis rígido (Módulo Actualizado)
                             resultados_rigido_complete = {
-                                'Espesor de losa calculado (D)': f"{D_rigido:.2f} {unidad_espesor_rigido}",
-                                'Junta máxima (L)': f"{L_junta_rigido:.2f} {unidad_longitud_rigido}",
-                                'Área de acero por temperatura (As)': f"{As_temp_rigido:.2f} {unidad_area_rigido}",
-                                'Número de ejes equivalentes (W18)': f"{W18_rigido:,.0f}",
-                                'Módulo de reacción (k)': f"{k_analisis_rigido} {unidad_k_rigido}",
-                                'Resistencia a flexión (Sc)': f"{Sc_rigido} {unidad_modulo_rigido}",
-                                'Módulo elasticidad (Ec)': f"{Ec_calc_rigido:.0f} {unidad_modulo_rigido}",
-                                'Coef. transferencia (J)': f"{J_rigido}",
-                                'Coef. drenaje (C)': f"{C_rigido}",
-                                'Confiabilidad (R)': f"{R_rigido}",
-                                'Porcentaje de fatiga': f"{porcentaje_fatiga_rigido:.2f}%",
-                                'Porcentaje de erosión': f"{porcentaje_erosion_rigido:.2f}%",
-                                'ZR (Factor confiabilidad)': f"{ZR_rigido}",
-                                'S0 (Desviación estándar)': f"{S0_rigido}",
-                                'ΔPSI (Pérdida servicio)': f"{delta_PSI_rigido}"
+                                'Espesor de losa calculado (D)': f"{D_rigido:.1f} {unidad_espesor_rigido}",
+                                'Espaciamiento de juntas': f"{L_junta_rigido:.2f} m",
+                                'Tipo de refuerzo': tipo_refuerzo_rigido,
+                                'Número de ESALs': f"{ESALs_rigido:,.0f}",
+                                'Módulo de reacción (k)': f"{k_analisis_rigido} MPa/m",
+                                'Resistencia del concreto (f\'c)': f"{f_c_rigido} MPa",
+                                'Módulo de rotura (MR)': f"{modulo_rotura_rigido_calc} MPa",
+                                'Coef. transferencia (j)': f"{j_rigido}",
+                                'Fatiga calculada': f"{porcentaje_fatiga_rigido:.2f}%",
+                                'Erosión calculada': f"{porcentaje_erosion_rigido:.2f}%",
+                                'Método de cálculo': "PCA + AASHTO 93 (Módulo Actualizado)",
+                                'Norma aplicada': "E.060 + DG-2018"
                             }
                             
                             # Generar PDF premium

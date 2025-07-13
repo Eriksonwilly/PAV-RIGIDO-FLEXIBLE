@@ -2092,8 +2092,8 @@ with tabs[0]:
                     W18_range_rigido = np.linspace(50000, 500000, 50)
                     
                     # Cálculos de sensibilidad
-                    D_k_rigido = [calcular_espesor_losa_rigido(w18_rigido, kx, R_rigido, C_rigido, Sc_rigido, J_rigido, Ec_rigido, sistema_unidades_rigido) for kx in k_range_rigido]
-                    D_Sc_rigido = [calcular_espesor_losa_rigido(w18_rigido, k_analisis_rigido, R_rigido, C_rigido, scx, J_rigido, Ec_rigido, sistema_unidades_rigido) for scx in Sc_range_rigido]
+                    D_k_rigido = [calcular_espesor_losa_rigido(W18_rigido, kx, R_rigido, C_rigido, Sc_rigido, J_rigido, Ec_rigido, sistema_unidades_rigido) for kx in k_range_rigido]
+                    D_Sc_rigido = [calcular_espesor_losa_rigido(W18_rigido, k_analisis_rigido, R_rigido, C_rigido, scx, J_rigido, Ec_rigido, sistema_unidades_rigido) for scx in Sc_range_rigido]
                     D_W18_rigido = [calcular_espesor_losa_rigido(w18x, k_analisis_rigido, R_rigido, C_rigido, Sc_rigido, J_rigido, Ec_rigido, sistema_unidades_rigido) for w18x in W18_range_rigido]
                     
                     # Gráfico de sensibilidad
@@ -2390,20 +2390,20 @@ with tabs[1]:
                     
                     # Comparación de capas
                     capas = ['Asfalto', 'Base', 'Subbase']
-            valores = [a1_flexible * D1_flexible, a2_flexible * D2_flexible * m2_flexible, a3_flexible * D3_flexible * m3_flexible]
-            colores = ['blue', 'green', 'orange']
-            ax4.bar(capas, valores, color=colores, alpha=0.7)
-            ax4.set_title('Contribución de Capas al SN', fontsize=12, fontweight='bold')
-            ax4.set_ylabel('Contribución al SN')
-            ax4.grid(True, alpha=0.3)
-            for i, v in enumerate(valores):
-                ax4.text(i, v + 0.01, f'{v:.2f}', ha='center', va='bottom')
-            
-            plt.tight_layout()
-            st.pyplot(fig_sens_flexible)
-            
-        except Exception as e:
-            st.error(f"Error generando gráficos: {str(e)}")
+                    valores = [a1_flexible * D1_flexible, a2_flexible * D2_flexible * m2_flexible, a3_flexible * D3_flexible * m3_flexible]
+                    colores = ['blue', 'green', 'orange']
+                    ax4.bar(capas, valores, color=colores, alpha=0.7)
+                    ax4.set_title('Contribución de Capas al SN', fontsize=12, fontweight='bold')
+                    ax4.set_ylabel('Contribución al SN')
+                    ax4.grid(True, alpha=0.3)
+                    for i, v in enumerate(valores):
+                        ax4.text(i, v + 0.01, f'{v:.2f}', ha='center', va='bottom')
+                    
+                    plt.tight_layout()
+                    st.pyplot(fig_sens_flexible)
+                    
+                except Exception as e:
+                    st.error(f"Error generando gráficos: {str(e)}")
         
         # Recomendaciones
         st.subheader('💡 Recomendaciones')

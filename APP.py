@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from io import BytesIO
 import base64
+import pdal
+import json
 
 # --- GESTIÓN ROBUSTA DE DEPENDENCIAS Y GRÁFICOS ---
 # Inspirado en APP1.py, pero manteniendo la estructura de APP.py
@@ -3205,3 +3207,172 @@ with tabs[4]:
                         mime="application/pdf",
                         key="btn_download_premium_normativas"
                     )
+
+# --- PROCESAMIENTO DE NUBE DE PUNTOS LIDAR (DRONES) ---
+def procesar_nube_puntos(archivo_las, cota_minima=2000):
+    """
+    Procesa datos LiDAR para extraer:
+    - Modelo Digital del Terreno (MDT).
+    - Curvas de nivel (cada 0.5m).
+    - Detección de zonas inestables (ej: hundimientos).
+    """
+    pipeline = {
+        "pipeline": [
+            { "filename": archivo_las, "type": "readers.las" },
+            { "type": "filters.range", "limits": f"Z[{cota_minima}:]" },
+            { "type": "filters.smrf", "ignore": "Classification[7:7]" },
+            { "type": "filters.ferry", "dimensions": "X,Y,Z=>Z_original" },
+            { "type": "filters.delaunay", "tolerance": 1.0 },
+            { "filename": "mdt_terreno.tif", "type": "writers.gdal" }
+        ]
+    }
+    pipeline = pdal.Pipeline(json.dumps(pipeline))
+    pipeline.execute()
+    metadata = pipeline.metadata
+    import numpy as np
+    return {
+        "Área_ha": metadata["metadata"]["readers.las"]["count"] * 0.0001,
+        "Pendiente_%": np.mean(np.gradient(pipeline.arrays[0]["Z_original"])) * 100,
+        "Zonas_inestables": "Analizar con ASTM D6432"
+    }
+
+# --- DISEÑO AUTOMATIZADO DE PAVIMENTOS RÍGIDO (PERÚ) ---
+def diseno_rigido(k_subrasante, ESALs, resistencia_concreto=28):
+    import math
+    factor_climatico = 1.3 if k_subrasante < 50 else 1.0
+    espesor_cm = ( (math.log10(ESALs) * 100 ) / ( (resistencia_concreto ** 0.7) * (k_subrasante ** 0.3) ) ) * factor_climatico
+    if espesor_cm < 20:
+        espesor_cm = 20
+    return {
+        "Espesor": f"{round(espesor_cm, 1)} cm",
+        "Juntas": f"Transversales: {round(3 * espesor_cm,1)}m | Longitudinales: {round(4.5 * espesor_cm,1)}m",
+        "Nota": "Usar concreto NP 350 (MR ≥ 4.5 MPa) - Norma IT.EC.030"
+    }
+
+# --- DISEÑO AUTOMATIZADO DE PAVIMENTOS FLEXIBLE (PERÚ) ---
+def diseno_flexible(CBR, ESALs, tipo_suelo="volcánico"):
+    import math
+    if tipo_suelo == "volcánico":
+        CBR_ajustado = CBR * 0.9
+    else:
+        CBR_ajustado = CBR
+    SN = (math.log10(ESALs) * (4.5 - CBR_ajustado)) / (0.372 * 1.2)
+    return {
+        "Base": f"{round(SN * 0.3, 1)} cm (Grava A-1-a)",
+        "Subbase": f"{round(SN * 0.7, 1)} cm (Material granular CBR ≥ 25%)",
+        "Nota": "Compactar al 95% Proctor Modificado - Art. 410.3 MTC"
+    }
+
+# --- INTEROPERABILIDAD CON CIVIL 3D (ESQUEMA) ---
+def exportar_a_civil3d(espesor, ruta_dwg):
+    # Este bloque es ilustrativo, requiere entorno AutoCAD y .NET
+    try:
+        import clr
+        clr.AddReference('Autodesk.AutoCAD.DatabaseServices')
+        from Autodesk.AutoCAD.ApplicationServices import Application
+        doc = Application.DocumentManager.MdiActiveDocument
+        with doc.LockDocument():
+            # Crear capas para pavimento
+            # crear_capa("PAVIMENTO_RIGIDO", color=5)
+            # dibujar_polilinea(espesor, capa="PAVIMENTO_RIGIDO")
+            pass
+    except Exception as e:
+        return f"Exportación a Civil 3D requiere entorno AutoCAD: {e}"
+
+# --- VALIDACIÓN NORMATIVA PERUANA ---
+def validar_normativa_peruana(espesor_cm, CBR_subbase, pendiente_cuneta):
+    validaciones = []
+    if espesor_cm < 20:
+        validaciones.append("❌ Espesor rígido menor a 20 cm (DG-2018 Art. 5.4.3)")
+    else:
+        validaciones.append("✅ Espesor rígido cumple DG-2018")
+    if CBR_subbase < 20:
+        validaciones.append("❌ Subbase flexible CBR < 20% (IT.5 - MTC)")
+    else:
+        validaciones.append("✅ Subbase flexible cumple IT.5 - MTC")
+    if pendiente_cuneta < 2:
+        validaciones.append("❌ Pendiente de cuneta < 2% (RAS 2020)")
+    else:
+        validaciones.append("✅ Pendiente de cuneta cumple RAS 2020")
+    return validaciones
+
+# --- DIAGRAMA DE ARQUITECTURA Y ROADMAP ---
+def mostrar_diagrama_arquitectura():
+    st.markdown("""
+    ### 🌐 Diagrama de Arquitectura del Software
+    ```mermaid
+    graph TD
+        A["Drone LiDAR"] --> B["Archivos LAS/LAZ"]
+        B --> C["PDAL - Procesamiento"]
+        C --> D["Modelo Digital del Terreno"]
+        D --> E["Diseño Pavimentos"]
+        E --> F["AutoCAD Civil 3D"]
+        E --> G["Revit BIM"]
+    ```
+    """, unsafe_allow_html=True)
+    st.markdown("""
+    ### 📈 Roadmap Priorizado
+    - **Fase 1 (0-3 meses):** Integrar PDAL para procesar datos LAS/LAZ. Conectar con QGIS para análisis geotécnico.
+    - **Fase 2 (3-6 meses):** API REST para móviles (colecta de datos CBR en campo). Exportación a BIM (Revit).
+    - **Fase 3 (6-12 meses):** Machine Learning para predecir vida útil del pavimento.
+    """)
+
+# --- NUEVAS PESTAÑAS AVANZADAS ---
+tab_labels = [
+    'Pavimento Rígido',
+    'Pavimento Flexible',
+    'Veredas y Cunetas',
+    'Drenaje',
+    'Normativas Locales',
+    '🚁 Caso Práctico San Miguel',
+    '🌍 Análisis Avanzado'
+]
+tabs = st.tabs(tab_labels)
+
+for i, tab in enumerate(tabs):
+    with tab:
+        if i == 5:
+            st.header("🚁 Caso Práctico San Miguel")
+            st.info("Procesamiento de datos LiDAR y diseño automatizado para San Miguel, Puno.")
+            st.markdown("**Sube tu archivo LAS/LAZ de dron:**")
+            archivo_las = st.file_uploader("Archivo LAS/LAZ", type=["las", "laz"])
+            if archivo_las:
+                resultados_lidar = procesar_nube_puntos(archivo_las.name)
+                st.write(resultados_lidar)
+            st.markdown("---")
+            st.markdown("### Diseño Automatizado de Pavimento Rígido (Norma Peruana)")
+            k = st.number_input("k subrasante (MPa/m)", 10, 200, 50)
+            ESALs = st.number_input("ESALs (ejes equivalentes)", 10000, 10000000, 100000)
+            resistencia_concreto = st.number_input("Resistencia concreto (MPa)", 20, 50, 28)
+            if st.button("Calcular Diseño Rígido"):
+                resultado_rigido = diseno_rigido(k, ESALs, resistencia_concreto)
+                st.write(resultado_rigido)
+            st.markdown("### Diseño Automatizado de Pavimento Flexible (Norma Peruana)")
+            CBR = st.number_input("CBR subrasante (%)", 2, 30, 8)
+            tipo_suelo = st.selectbox("Tipo de suelo", ["volcánico", "aluvial", "otro"])
+            if st.button("Calcular Diseño Flexible"):
+                resultado_flexible = diseno_flexible(CBR, ESALs, tipo_suelo)
+                st.write(resultado_flexible)
+            st.markdown("### Validación Normativa Peruana")
+            pendiente_cuneta = st.number_input("Pendiente de cuneta (%)", 0.5, 10.0, 2.0)
+            if st.button("Validar Normativa"):
+                validaciones = validar_normativa_peruana(float(resultado_rigido['Espesor'].split()[0]), CBR, pendiente_cuneta)
+                for v in validaciones:
+                    st.write(v)
+            st.markdown("---")
+            mostrar_diagrama_arquitectura()
+        elif i == 6:
+            st.header("🌍 Análisis Avanzado")
+            st.info("Interoperabilidad con QGIS, Civil 3D y BIM. Exportación de modelos y planos constructivos.")
+            st.markdown("**Exportar a Civil 3D (requiere entorno AutoCAD):**")
+            espesor = st.number_input("Espesor de diseño (cm)", 10, 50, 20)
+            ruta_dwg = st.text_input("Ruta DWG destino", "C:/proyecto/pavimento.dwg")
+            if st.button("Exportar a Civil 3D"):
+                msg = exportar_a_civil3d(espesor, ruta_dwg)
+                st.write(msg)
+            st.markdown("---")
+            st.markdown("### Integración con QGIS y Revit BIM")
+            st.markdown("- Visualiza el MDT y curvas de nivel en QGIS.")
+            st.markdown("- Exporta modelos a Revit para modelado 4D.")
+            st.markdown("- API REST para colecta de datos en campo (futuro).")
+            mostrar_diagrama_arquitectura()

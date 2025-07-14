@@ -1,0 +1,62 @@
+{
+  "project_info": {
+    "project_name": "San Miguel - Cuadra 1",
+    "location": "San Miguel, Puno",
+    "design_year": 2025,
+    "analysis_period": 20,
+    "traffic_opening_year": 250000
+  },
+  "climate_data": {
+    "weather_station": "Puno, Peru",
+    "latitude": -15.2345,
+    "longitude": -70.1234,
+    "elevation": 3850,
+    "climate_zone": "High Altitude Andean"
+  },
+  "traffic_data": {
+    "base_traffic": 250000,
+    "traffic_growth_rate": 3.5,
+    "traffic_distribution": {
+      "single_axles": 0.6,
+      "tandem_axles": 0.35,
+      "tridem_axles": 0.05
+    },
+    "lane_distribution": 0.5,
+    "directional_distribution": 0.5
+  },
+  "material_properties": {
+    "subgrade": {
+      "type": "A-4",
+      "CBR": 4.5,
+      "resilient_modulus": 45000,
+      "poisson_ratio": 0.35
+    },
+    "subbase": {
+      "type": "A-1-b",
+      "thickness": 6.88975,
+      "resilient_modulus": 15000,
+      "poisson_ratio": 0.35
+    },
+    "base": {
+      "type": "A-1-a",
+      "thickness": 2.95275,
+      "resilient_modulus": 30000,
+      "poisson_ratio": 0.35
+    },
+    "asphalt": {
+      "type": "AC-20",
+      "thickness": 2.0,
+      "resilient_modulus": 450000,
+      "poisson_ratio": 0.35,
+      "air_voids": 4.0,
+      "effective_binder_content": 10.5
+    }
+  },
+  "design_criteria": {
+    "reliability": 95,
+    "standard_error": 0.35,
+    "initial_serviceability": 4.2,
+    "terminal_serviceability": 2.5,
+    "design_ESALs": 250000
+  }
+}

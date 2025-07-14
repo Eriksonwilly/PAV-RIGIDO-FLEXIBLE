@@ -1,0 +1,16 @@
+{
+  "fecha_prueba": "2025-07-13 18:47:08",
+  "resultados": {
+    "google_earth_engine": true,
+    "lidar_avanzado": false,
+    "exportacion_externa": true,
+    "caso_practico_san_miguel": false,
+    "modulos_originales": true,
+    "formulas_pavimento": true
+  },
+  "estadisticas": {
+    "total_pruebas": 6,
+    "pruebas_exitosas": 4,
+    "porcentaje_exito": 66.66666666666666
+  }
+}

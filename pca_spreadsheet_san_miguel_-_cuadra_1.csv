@@ -1,0 +1,29 @@
+Category,Parameter,Value,Unit
+project_information,project_name,San Miguel - Cuadra 1,N/A
+project_information,location,"San Miguel, Puno",N/A
+project_information,design_date,2025-07-13,N/A
+project_information,designer,Software de Diseño de Pavimentos - UNI,N/A
+traffic_data,design_ESALs,250000,N/A
+traffic_data,traffic_growth_rate,3.5,N/A
+traffic_data,design_period,20,N/A
+traffic_data,truck_factor,1.0,N/A
+traffic_data,lane_distribution,0.5,N/A
+subgrade_data,k_value,45,N/A
+subgrade_data,CBR,4.5,N/A
+subgrade_data,subgrade_type,Volcanic soil,N/A
+subgrade_data,drainage_condition,Fair,N/A
+concrete_data,compressive_strength,28,N/A
+concrete_data,flexural_strength,4.5,N/A
+concrete_data,elastic_modulus,28000,N/A
+concrete_data,poisson_ratio,0.15,N/A
+concrete_data,thermal_coefficient,9.9e-06,N/A
+concrete_data,shrinkage_coefficient,0.0005,N/A
+pavement_design,slab_thickness,20.5,N/A
+pavement_design,joint_spacing,61.5,N/A
+pavement_design,shoulder_type,Asphalt,N/A
+pavement_design,dowel_bars,Yes,N/A
+pavement_design,tie_bars,Yes,N/A
+fatigue_analysis,fatigue_equation,PCA,N/A
+fatigue_analysis,erosion_factor,PCA,N/A
+fatigue_analysis,load_transfer,Doweled joints,N/A
+fatigue_analysis,design_reliability,95,N/A

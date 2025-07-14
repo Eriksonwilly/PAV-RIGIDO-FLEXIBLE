@@ -59,6 +59,13 @@ except ImportError:
             "Estado": "✅ Interoperabilidad completada"
         }
 
+class EnhancedJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        try:
+            return super().default(obj)
+        except TypeError:
+            return str(obj)
+
 class CasoPracticoSanMiguel:
     """Caso práctico completo para San Miguel, Puno"""
     
@@ -313,15 +320,15 @@ class CasoPracticoSanMiguel:
         return reporte
     
     def guardar_resultados(self, reporte: Dict) -> None:
-        """Guarda los resultados del caso práctico"""
+        """Guarda los resultados del caso práctico, serializando cualquier objeto no estándar como string"""
         try:
             # Crear directorio de resultados
             os.makedirs("resultados_san_miguel", exist_ok=True)
-            
-            # Guardar reporte JSON
+
+            # Guardar reporte JSON con encoder robusto
             with open("resultados_san_miguel/reporte_completo.json", "w", encoding="utf-8") as f:
-                json.dump(reporte, f, indent=2, ensure_ascii=False)
-            
+                json.dump(reporte, f, indent=2, ensure_ascii=False, cls=EnhancedJSONEncoder)
+
             # Guardar resumen ejecutivo
             with open("resultados_san_miguel/resumen_ejecutivo.txt", "w", encoding="utf-8") as f:
                 f.write("CASO PRÁCTICO - SAN MIGUEL, PUNO\n")
@@ -343,7 +350,7 @@ class CasoPracticoSanMiguel:
                     f.write(f"{i}. {recomendacion}\n")
             
             print("💾 Resultados guardados en: resultados_san_miguel/")
-            
+        
         except Exception as e:
             print(f"⚠️ Error guardando resultados: {e}")
 
@@ -373,6 +380,11 @@ def main():
         print("Los resultados se han guardado en la carpeta 'resultados_san_miguel'")
     else:
         print(f"\n❌ ERROR: {resultado['error']}")
+
+def ejecutar_caso_practico_completo():
+    """Función para uso externo - ejecuta el caso práctico completo"""
+    caso = CasoPracticoSanMiguel()
+    return caso.ejecutar_caso_completo()
 
 if __name__ == "__main__":
     main() 

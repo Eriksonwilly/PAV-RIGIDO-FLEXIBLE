@@ -1,0 +1,17 @@
+{
+  "fecha_demostracion": "2025-07-13 18:55:56",
+  "resultados": {
+    "google_earth_engine": true,
+    "lidar_avanzado": false,
+    "exportacion_externa": false,
+    "caso_practico": true,
+    "verificacion_app": true
+  },
+  "archivos_generados": 5,
+  "estadisticas": {
+    "total_demos": 5,
+    "demos_exitosas": 3,
+    "porcentaje_exito": 60.0
+  },
+  "estado": "⚠️ Demostración con algunos problemas"
+}

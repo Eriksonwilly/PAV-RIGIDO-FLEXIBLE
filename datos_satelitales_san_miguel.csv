@@ -1,0 +1,20 @@
+parametro,valor,unidad,fuente
+NDVI_promedio,0.383,N/A,Google Earth Engine
+NDVI_minimo,0.252,N/A,Google Earth Engine
+NDVI_maximo,0.557,N/A,Google Earth Engine
+Humedad_suelo_promedio,0.148,N/A,Google Earth Engine
+Humedad_suelo_minima,0.09,N/A,Google Earth Engine
+Humedad_suelo_maxima,0.247,N/A,Google Earth Engine
+Precipitacion_anual,640.8,N/A,Google Earth Engine
+Precipitacion_mensual_promedio,68.2,N/A,Google Earth Engine
+Temperatura_promedio,9.2,N/A,Google Earth Engine
+Evapotranspiracion,946.1,N/A,Google Earth Engine
+Indice_aridez,0.61,N/A,Google Earth Engine
+Clasificacion_suelo,Suelo volcánico con baja retención de humedad,N/A,Google Earth Engine
+CBR_estimado_NDVI,4.7,N/A,Google Earth Engine
+temporal_meses_analizados,12,N/A,Google Earth Engine
+temporal_fecha_inicio,2023-01-01,N/A,Google Earth Engine
+temporal_fecha_fin,2023-12-31,N/A,Google Earth Engine
+temporal_tendencia_NDVI,Estable,N/A,Google Earth Engine
+temporal_tendencia_humedad,Variable estacional,N/A,Google Earth Engine
+temporal_estacionalidad,Clara (lluvias de verano),N/A,Google Earth Engine

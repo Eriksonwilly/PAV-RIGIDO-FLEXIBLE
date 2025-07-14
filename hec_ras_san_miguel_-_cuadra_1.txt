@@ -1,0 +1,56 @@
+
+HEC-RAS Version 6.0
+Title: San Miguel - Cuadra 1 - Diseño de Drenaje
+Author: Software de Diseño de Pavimentos - UNI
+Date: 2025-07-13
+Description: Diseño de cunetas y drenaje superficial para pavimentación urbana
+
+# DATOS DEL PROYECTO
+Project Name: San Miguel - Cuadra 1
+Location: San Miguel, Puno, Perú
+Design Year: 2025
+Return Period: 10 years
+
+# PARÁMETROS HIDROLÓGICOS
+Area: 0.08 ha
+Length: 100 m
+Slope: 5.2%
+Time of Concentration: 8.5 min
+Rainfall Intensity: 60 mm/h
+Runoff Coefficient: 0.7
+
+# DISEÑO DE CUNETAS
+Design Flow: 0.0012 m³/s
+Design Flow: 1.2 L/s
+Velocity: 1.5 m/s
+Depth: 0.15 m
+Width: 0.3 m
+
+# GEOMETRÍA DE CUNETAS
+# Sección triangular
+Station 0.0
+Elevation 0.15
+Station 0.3
+Elevation 0.0
+
+# MATERIALES
+Manning's n: 0.013 (Concrete)
+Side Slope: 2:1
+Bottom Width: 0.0 m
+
+# ANÁLISIS HIDRÁULICO
+Flow Type: Subcritical
+Analysis Method: Standard Step
+Convergence Tolerance: 0.01
+
+# RESULTADOS ESPERADOS
+Expected Depth: 0.15 m
+Expected Velocity: 1.5 m/s
+Froude Number: < 1.0 (Subcritical)
+Safety Factor: > 1.5
+
+# RECOMENDACIONES
+- Mantener pendiente mínima de 2%
+- Limpieza periódica de cunetas
+- Considerar drenaje subterráneo en zonas críticas
+- Verificar capacidad durante eventos extremos

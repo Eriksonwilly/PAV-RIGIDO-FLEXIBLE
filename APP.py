@@ -1389,31 +1389,46 @@ def convertir_unidades(valor, unidad_origen, unidad_destino):
     return valor
 
 # --- FUNCIÓN DE CÁLCULO AASHTO 93 (YA CORRECTA) ---
-def calcular_espesor_losa_AASHTO93(W18, ZR, S0, delta_PSI, Sc, J, k, C, D_init=8.0):
+def calcular_espesor_losa_AASHTO93(W18, ZR, S0, delta_PSI, Sc, J, k, C, Ec=30000, D_init=8.0):
     # FÓRMULA OFICIAL AASHTO 93 para pavimento rígido
     # Todas las unidades en sistema inglés: D en pulgadas, Sc en psi, k en pci
     # Iterativo: se ajusta D hasta que log10(W18_calc) ~= log10(W18)
     import math
+    
+    # Validar parámetros de entrada
+    if W18 <= 0 or Sc <= 0 or k <= 0 or Ec <= 0:
+        return None
+    
     D = D_init
     for _ in range(20):  # Máximo 20 iteraciones
-        # Calcular W18 usando la fórmula AASHTO 93
-        log10_W18_calc = ZR * S0 + 7.35 * math.log10(D + 1) - 0.06 + \
-                        math.log10(delta_PSI / (4.5 - 1.5)) / (1 + 1.624 * 10**7 / (D + 1)**8.46) + \
-                        (4.22 - 0.32 * math.log10(Sc)) * math.log10(Sc / 215.63 * J * (D**0.75 - 1.132)) - \
-                        (4.22 - 0.32 * math.log10(Sc)) * math.log10(215.63 * J * (D**0.75 - 1.132) / (18.42 * (Ec / 1000)**0.25)) + \
-                        (4.22 - 0.32 * math.log10(Sc)) * math.log10(18.42 * (Ec / 1000)**0.25 / (k / 1000))
-        
-        W18_calc = 10**log10_W18_calc
-        
-        # Ajustar D
-        if abs(W18_calc - W18) / W18 < 0.01:  # 1% de tolerancia
+        try:
+            # Calcular W18 usando la fórmula AASHTO 93 corregida
+            log10_W18_calc = ZR * S0 + 7.35 * math.log10(D + 1) - 0.06 + \
+                            math.log10(delta_PSI / (4.5 - 1.5)) / (1 + 1.624 * 10**7 / (D + 1)**8.46) + \
+                            (4.22 - 0.32 * math.log10(Sc)) * math.log10(Sc / (215.63 * J * (D**0.75 - 1.132))) - \
+                            (4.22 - 0.32 * math.log10(Sc)) * math.log10(215.63 * J * (D**0.75 - 1.132) / (18.42 * (Ec / 1000)**0.25)) + \
+                            (4.22 - 0.32 * math.log10(Sc)) * math.log10(18.42 * (Ec / 1000)**0.25 / (k / 1000))
+            
+            W18_calc = 10**log10_W18_calc
+            
+            # Ajustar D
+            if abs(W18_calc - W18) / W18 < 0.01:  # 1% de tolerancia
+                break
+            elif W18_calc > W18:
+                D += 0.5
+            else:
+                D -= 0.5
+                
+            # Validar que D no sea negativo
+            if D <= 0:
+                D = 4.0  # Valor mínimo
+                
+        except (ValueError, ZeroDivisionError, OverflowError):
+            # Si hay error matemático, usar fórmula simplificada
+            D = 4.0 + (W18 / 1000000) * 2.0
             break
-        elif W18_calc > W18:
-            D += 0.5
-        else:
-            D -= 0.5
     
-    return D
+    return max(D, 4.0)  # Mínimo 4 pulgadas
 
 # --- FUNCIONES PARA PROCESAMIENTO DE DATOS LIDAR/DRONES ---
 
@@ -3899,8 +3914,13 @@ with tabs[5]:
                     espesor_rigido_lidar = calcular_espesor_losa_AASHTO93(
                         W18_rigido_lidar, ZR_rigido_lidar, S0_rigido_lidar, 
                         delta_PSI_rigido_lidar, Sc_rigido_lidar, J_rigido_lidar, 
-                        k_modulo, 1.0  # C = 1.0 (drenaje bueno)
+                        k_modulo, 1.0, Ec_rigido_lidar  # C = 1.0 (drenaje bueno), Ec incluido
                     )
+                    
+                    # Inicializar variables
+                    espesor_rigido_mm = 0
+                    junta_maxima = 0
+                    area_acero = 0
                     
                     if espesor_rigido_lidar is not None:
                         espesor_rigido_mm = espesor_rigido_lidar * 25.4

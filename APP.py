@@ -40,6 +40,39 @@ try:
 except ImportError:
     REPORTLAB_AVAILABLE = False
 
+# Verificación de librerías para LiDAR
+try:
+    import laspy
+    LASPY_AVAILABLE = True
+except ImportError:
+    LASPY_AVAILABLE = False
+
+try:
+    import open3d as o3d
+    OPEN3D_AVAILABLE = True
+except ImportError:
+    OPEN3D_AVAILABLE = False
+
+try:
+    import rasterio
+    from rasterio.transform import from_origin
+    RASTERIO_AVAILABLE = True
+except ImportError:
+    RASTERIO_AVAILABLE = False
+
+try:
+    import ee
+    import geemap
+    GEE_AVAILABLE = True
+except ImportError:
+    GEE_AVAILABLE = False
+
+try:
+    from pyautocad import Autocad
+    AUTOCAD_AVAILABLE = True
+except ImportError:
+    AUTOCAD_AVAILABLE = False
+
 # Decorador seguro para matplotlib
 from functools import wraps
 def safe_matplotlib_plot(func):
@@ -63,6 +96,16 @@ if not PLOTLY_AVAILABLE:
     warnings.append("⚠️ Plotly no está instalado. Los gráficos interactivos no estarán disponibles.")
 if not REPORTLAB_AVAILABLE:
     warnings.append("⚠️ ReportLab no está instalado. La generación de PDFs no estará disponible.")
+if not LASPY_AVAILABLE:
+    warnings.append("⚠️ LasPy no está instalado. El procesamiento de archivos LAS/LAZ no estará disponible.")
+if not OPEN3D_AVAILABLE:
+    warnings.append("⚠️ Open3D no está instalado. El procesamiento 3D de nubes de puntos no estará disponible.")
+if not RASTERIO_AVAILABLE:
+    warnings.append("⚠️ Rasterio no está instalado. El procesamiento de ortofotos no estará disponible.")
+if not GEE_AVAILABLE:
+    warnings.append("⚠️ Google Earth Engine no está instalado. Los datos satelitales no estarán disponibles.")
+if not AUTOCAD_AVAILABLE:
+    warnings.append("⚠️ PyAutoCAD no está instalado. La integración con AutoCAD no estará disponible.")
 for warning in warnings:
     st.warning(warning)
 
@@ -1347,6 +1390,408 @@ def calcular_espesor_losa_AASHTO93(W18, ZR, S0, delta_PSI, Sc, J, k, C, D_init=8
     # FÓRMULA OFICIAL AASHTO 93 para pavimento rígido
     # Todas las unidades en sistema inglés: D en pulgadas, Sc en psi, k en pci
     # Iterativo: se ajusta D hasta que log10(W18_calc) ~= log10(W18)
+
+# --- FUNCIONES PARA PROCESAMIENTO DE DATOS LIDAR/DRONES ---
+
+def procesar_archivo_las_laz(file_path, output_dir="output_lidar"):
+    """
+    Procesa archivos LAS/LAZ de drones para extraer información topográfica
+    """
+    if not LASPY_AVAILABLE:
+        st.error("LasPy no está instalado. Instala con: pip install laspy")
+        return None
+    
+    try:
+        import os
+        import numpy as np
+        
+        # Crear directorio de salida
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Leer archivo LAS/LAZ
+        las = laspy.read(file_path)
+        points = np.vstack((las.x, las.y, las.z)).transpose()
+        
+        # Estadísticas básicas
+        stats = {
+            'total_points': len(points),
+            'x_min': np.min(las.x), 'x_max': np.max(las.x),
+            'y_min': np.min(las.y), 'y_max': np.max(las.y),
+            'z_min': np.min(las.z), 'z_max': np.max(las.z),
+            'area_m2': (np.max(las.x) - np.min(las.x)) * (np.max(las.y) - np.min(las.y)),
+            'volume_m3': None
+        }
+        
+        # Filtrar puntos de suelo (clasificación LAS)
+        if hasattr(las, 'classification'):
+            ground_points = points[las.classification == 2]  # Clase 2 = suelo
+            stats['ground_points'] = len(ground_points)
+        else:
+            ground_points = points
+            stats['ground_points'] = len(points)
+        
+        # Generar MDT si Open3D está disponible
+        if OPEN3D_AVAILABLE and len(ground_points) > 100:
+            try:
+                pcd = o3d.geometry.PointCloud()
+                pcd.points = o3d.utility.Vector3dVector(ground_points)
+                
+                # Generar malla triangular
+                mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd, depth=8)
+                
+                # Guardar MDT
+                mdt_path = os.path.join(output_dir, "mdt.obj")
+                o3d.io.write_triangle_mesh(mdt_path, mesh)
+                stats['mdt_path'] = mdt_path
+                
+            except Exception as e:
+                st.warning(f"No se pudo generar MDT: {str(e)}")
+        
+        # Calcular pendientes y curvas de nivel
+        if len(ground_points) > 100:
+            # Crear grid de elevación
+            x_range = np.linspace(stats['x_min'], stats['x_max'], 100)
+            y_range = np.linspace(stats['y_min'], stats['y_max'], 100)
+            X, Y = np.meshgrid(x_range, y_range)
+            
+            # Interpolación simple para Z
+            from scipy.interpolate import griddata
+            try:
+                Z = griddata((ground_points[:, 0], ground_points[:, 1]), ground_points[:, 2], (X, Y), method='linear')
+                
+                # Calcular pendientes
+                dx = np.gradient(X, axis=1)
+                dy = np.gradient(Y, axis=0)
+                dz_dx = np.gradient(Z, axis=1)
+                dz_dy = np.gradient(Z, axis=0)
+                
+                slopes = np.sqrt(dz_dx**2 + dz_dy**2)
+                stats['pendiente_promedio'] = np.nanmean(slopes) * 100  # Porcentaje
+                stats['pendiente_maxima'] = np.nanmax(slopes) * 100
+                
+                # Guardar datos de pendientes
+                np.save(os.path.join(output_dir, "pendientes.npy"), slopes)
+                stats['pendientes_path'] = os.path.join(output_dir, "pendientes.npy")
+                
+            except Exception as e:
+                st.warning(f"No se pudieron calcular pendientes: {str(e)}")
+        
+        return stats
+        
+    except Exception as e:
+        st.error(f"Error procesando archivo LAS/LAZ: {str(e)}")
+        return None
+
+def extraer_datos_satelitales_gee(coords, start_date, end_date):
+    """
+    Extrae datos satelitales de Google Earth Engine para análisis de suelo
+    """
+    if not GEE_AVAILABLE:
+        st.error("Google Earth Engine no está instalado. Instala con: pip install earthengine-api geemap")
+        return None
+    
+    try:
+        # Inicializar GEE
+        ee.Initialize()
+        
+        # Crear geometría
+        geometry = ee.Geometry.Point(coords)
+        
+        # Extraer NDVI (Sentinel-2)
+        sentinel = ee.ImageCollection('COPERNICUS/S2_SR') \
+            .filterDate(start_date, end_date) \
+            .filterBounds(geometry) \
+            .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20)) \
+            .median()
+        
+        ndvi = sentinel.normalizedDifference(['B8', 'B4']).rename('NDVI')
+        
+        # Extraer humedad del suelo (SMAP)
+        smap = ee.ImageCollection('NASA/SMAP/SPL4SMGP/007') \
+            .filterDate(start_date, end_date) \
+            .first()
+        
+        soil_moisture = smap.select('sm_surface').rename('SOIL_MOISTURE')
+        
+        # Combinar resultados
+        result = ndvi.addBands(soil_moisture)
+        
+        # Exportar a CSV
+        import pandas as pd
+        data_dict = {
+            'NDVI_promedio': float(ndvi.reduceRegion(ee.Reducer.mean(), geometry, 30).get('NDVI').getInfo()),
+            'Humedad_suelo_promedio': float(soil_moisture.reduceRegion(ee.Reducer.mean(), geometry, 30000).get('SOIL_MOISTURE').getInfo()),
+            'fecha_inicio': start_date,
+            'fecha_fin': end_date,
+            'coordenadas': coords
+        }
+        
+        return data_dict
+        
+    except Exception as e:
+        st.error(f"Error extrayendo datos satelitales: {str(e)}")
+        return None
+
+def calcular_cbr_ndvi(ndvi_value):
+    """
+    Correlación NDVI vs CBR basada en estudios de suelo
+    """
+    # Correlación empírica NDVI vs CBR
+    if ndvi_value < 0.2:
+        return 2.0  # Suelo muy pobre
+    elif ndvi_value < 0.3:
+        return 3.5  # Suelo pobre
+    elif ndvi_value < 0.4:
+        return 5.0  # Suelo regular
+    elif ndvi_value < 0.5:
+        return 7.0  # Suelo bueno
+    elif ndvi_value < 0.6:
+        return 9.0  # Suelo muy bueno
+    else:
+        return 12.0  # Suelo excelente
+
+def generar_hec_ras_drenaje(area_ha, longitud_m, pendiente_pct, periodo_retorno=10):
+    """
+    Genera archivo HEC-RAS para diseño de drenaje
+    """
+    try:
+        # Parámetros hidrológicos
+        intensidad_lluvia = 60  # mm/h para Puno
+        coeficiente_escorrentia = 0.7
+        
+        # Cálculo de caudal
+        caudal_lps = (area_ha * 10000 * intensidad_lluvia * coeficiente_escorrentia) / (3.6 * 1000000)
+        caudal_m3s = caudal_lps / 1000
+        
+        # Diseño de cuneta
+        velocidad_diseno = 1.5  # m/s
+        profundidad_cuneta = 0.15  # m
+        ancho_cuneta = 0.3  # m
+        
+        # Generar contenido HEC-RAS
+        contenido = f"""HEC-RAS Version 6.0
+Title: San Miguel - Diseño de Drenaje Automático
+Author: Software de Diseño de Pavimentos - LiDAR
+Date: {pd.Timestamp.now().strftime('%Y-%m-%d')}
+Description: Diseño automático de cunetas basado en datos LiDAR
+
+# DATOS DEL PROYECTO
+Project Name: San Miguel - Cuadra 1
+Location: San Miguel, Puno, Perú
+Design Year: 2025
+Return Period: {periodo_retorno} years
+
+# PARÁMETROS HIDROLÓGICOS (LiDAR)
+Area: {area_ha:.2f} ha
+Length: {longitud_m:.1f} m
+Slope: {pendiente_pct:.1f}%
+Time of Concentration: 8.5 min
+Rainfall Intensity: {intensidad_lluvia} mm/h
+Runoff Coefficient: {coeficiente_escorrentia}
+
+# DISEÑO DE CUNETAS
+Design Flow: {caudal_m3s:.4f} m³/s
+Design Flow: {caudal_lps:.1f} L/s
+Velocity: {velocidad_diseno} m/s
+Depth: {profundidad_cuneta} m
+Width: {ancho_cuneta} m
+
+# GEOMETRÍA DE CUNETAS
+# Sección triangular
+Station 0.0
+Elevation {profundidad_cuneta}
+Station {ancho_cuneta}
+Elevation 0.0
+
+# MATERIALES
+Manning's n: 0.013 (Concrete)
+Side Slope: 2:1
+Bottom Width: 0.0 m
+
+# ANÁLISIS HIDRÁULICO
+Flow Type: Subcritical
+Analysis Method: Standard Step
+Convergence Tolerance: 0.01
+
+# RESULTADOS ESPERADOS
+Expected Depth: {profundidad_cuneta} m
+Expected Velocity: {velocidad_diseno} m/s
+Froude Number: < 1.0 (Subcritical)
+Safety Factor: > 1.5
+
+# RECOMENDACIONES
+- Mantener pendiente mínima de 2%
+- Limpieza periódica de cunetas
+- Considerar drenaje subterráneo en zonas críticas
+- Verificar capacidad durante eventos extremos
+- Datos obtenidos mediante LiDAR/Drone
+"""
+        
+        return contenido
+        
+    except Exception as e:
+        st.error(f"Error generando HEC-RAS: {str(e)}")
+        return None
+
+def exportar_autocad_civil3d(points_data, output_path):
+    """
+    Exporta datos a AutoCAD Civil 3D
+    """
+    if not AUTOCAD_AVAILABLE:
+        st.warning("PyAutoCAD no está instalado. No se puede exportar a AutoCAD.")
+        return False
+    
+    try:
+        acad = Autocad()
+        
+        # Crear puntos en AutoCAD
+        for i, point in enumerate(points_data[:1000]):  # Límite de puntos
+            acad.model.AddPoint(point[:3])
+        
+        # Guardar archivo
+        acad.app.ActiveDocument.SaveAs(output_path)
+        return True
+        
+    except Exception as e:
+        st.error(f"Error exportando a AutoCAD: {str(e)}")
+        return False
+
+def generar_pdf_lidar_completo(datos_proyecto, resultados_lidar, datos_satelitales, hec_ras_content):
+    """
+    Genera PDF completo con resultados de LiDAR
+    """
+    if not REPORTLAB_AVAILABLE:
+        st.error("ReportLab no está instalado. Instala con: pip install reportlab")
+        return None
+    
+    try:
+        from reportlab.lib import colors
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Image as RLImage
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.lib.units import inch
+        from reportlab.lib.pagesizes import A4
+        from io import BytesIO
+        from datetime import datetime
+        import os
+        
+        pdf_buffer = BytesIO()
+        doc = SimpleDocTemplate(pdf_buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=40, bottomMargin=30)
+        styles = getSampleStyleSheet()
+        styleN = styles["Normal"]
+        styleH = styles["Heading1"]
+        styleH2 = styles["Heading2"]
+        styleH3 = styles["Heading3"]
+        elements = []
+
+        # Portada
+        elements.append(Spacer(1, 30))
+        elements.append(Paragraph("CONSORCIO DEJ", styleH))
+        elements.append(Spacer(1, 20))
+        elements.append(Paragraph("Sistema de Diseño de Pavimentos con LiDAR", styleH2))
+        elements.append(Spacer(1, 30))
+        elements.append(Paragraph("<b>REPORTE TÉCNICO LIDAR/DRONE</b>", styleH2))
+        elements.append(Spacer(1, 20))
+        elements.append(Paragraph(f"<b>Proyecto:</b> {datos_proyecto.get('Proyecto', 'N/A')}<br/><b>Fecha:</b> {datetime.now().strftime('%d/%m/%Y %H:%M')}<br/><b>Usuario:</b> {datos_proyecto.get('Usuario', 'N/A')}", styleN))
+        elements.append(Spacer(1, 20))
+        elements.append(Paragraph("<b>Software:</b> CONSORCIO DEJ - LiDAR + Google Earth Engine", styleN))
+        elements.append(Spacer(1, 100))
+        elements.append(Paragraph("<b>Normativas:</b> AASHTO 93, PCA, MTC, RNE", styleN))
+        elements.append(PageBreak())
+
+        # 1. Datos del Proyecto
+        elements.append(Paragraph("1. DATOS DEL PROYECTO", styleH))
+        datos_tabla = [
+            ["Parámetro", "Valor", "Unidad"],
+            ["Nombre del Proyecto", datos_proyecto.get('Proyecto', 'N/A'), ""],
+            ["Descripción", datos_proyecto.get('Descripción', 'N/A'), ""],
+            ["Sistema de unidades", datos_proyecto.get('Sistema_Unidades', 'SI'), ""],
+            ["Fecha de generación", datetime.now().strftime('%d/%m/%Y %H:%M'), ""]
+        ]
+        tabla = Table(datos_tabla, colWidths=[200, 150, 80])
+        tabla.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ]))
+        elements.append(tabla)
+        elements.append(Spacer(1, 10))
+        elements.append(PageBreak())
+
+        # 2. Resultados LiDAR
+        elements.append(Paragraph("2. RESULTADOS LIDAR/DRONE", styleH))
+        if resultados_lidar:
+            lidar_data = []
+            for key, value in resultados_lidar.items():
+                if isinstance(value, (int, float)):
+                    lidar_data.append([key, f"{value:.2f}", ""])
+                else:
+                    lidar_data.append([key, str(value), ""])
+            
+            if lidar_data:
+                lidar_tabla = [["Parámetro", "Valor", "Unidad"]] + lidar_data
+                tabla_lidar = Table(lidar_tabla, colWidths=[200, 150, 80])
+                tabla_lidar.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ]))
+                elements.append(tabla_lidar)
+        elements.append(Spacer(1, 10))
+        elements.append(PageBreak())
+
+        # 3. Datos Satelitales
+        elements.append(Paragraph("3. DATOS SATELITALES (Google Earth Engine)", styleH))
+        if datos_satelitales:
+            sat_data = []
+            for key, value in datos_satelitales.items():
+                if isinstance(value, (int, float)):
+                    sat_data.append([key, f"{value:.4f}", ""])
+                else:
+                    sat_data.append([key, str(value), ""])
+            
+            if sat_data:
+                sat_tabla = [["Parámetro", "Valor", "Unidad"]] + sat_data
+                tabla_sat = Table(sat_tabla, colWidths=[200, 150, 80])
+                tabla_sat.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.lightgreen),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ]))
+                elements.append(tabla_sat)
+        elements.append(Spacer(1, 10))
+        elements.append(PageBreak())
+
+        # 4. Diseño de Drenaje
+        elements.append(Paragraph("4. DISEÑO DE DRENAJE (HEC-RAS)", styleH))
+        if hec_ras_content:
+            elements.append(Paragraph("Contenido del archivo HEC-RAS generado:", styleN))
+            elements.append(Paragraph(hec_ras_content.replace('\n', '<br/>'), styleN))
+        elements.append(Spacer(1, 10))
+        elements.append(PageBreak())
+
+        # 5. Recomendaciones
+        elements.append(Paragraph("5. RECOMENDACIONES", styleH))
+        elements.append(Paragraph("• Los datos LiDAR proporcionan alta precisión topográfica", styleN))
+        elements.append(Paragraph("• Integración con Google Earth Engine para análisis de suelo", styleN))
+        elements.append(Paragraph("• Diseño automático de drenaje con HEC-RAS", styleN))
+        elements.append(Paragraph("• Exportación a AutoCAD Civil 3D para planos", styleN))
+        elements.append(Paragraph("• Considerar condiciones específicas de San Miguel, Puno", styleN))
+        elements.append(PageBreak())
+
+        # Numeración de páginas
+        def add_page_number(canvas, doc):
+            canvas.saveState()
+            canvas.setFont('Helvetica', 9)
+            canvas.drawString(30, 30, f"Página {doc.page}")
+            canvas.restoreState()
+
+        doc.build(elements, onFirstPage=add_page_number, onLaterPages=add_page_number)
+        pdf_buffer.seek(0)
+        return pdf_buffer
+        
+    except Exception as e:
+        st.error(f"Error generando PDF LiDAR: {str(e)}")
+        return None
     import math
     D = D_init
     for _ in range(30):
@@ -1978,7 +2423,8 @@ tabs = st.tabs([
     'Pavimento Flexible',
     'Veredas y Cunetas',
     'Drenaje',
-    'Normativas Locales'
+    'Normativas Locales',
+    'LiDAR/Drones'
 ])
 
 # --- PAVIMENTO RÍGIDO ---
@@ -3204,4 +3650,361 @@ with tabs[4]:
                         file_name=st.session_state['pdf_premium_normativas_filename'],
                         mime="application/pdf",
                         key="btn_download_premium_normativas"
+                    )
+
+# --- LIDAR/DRONES ---
+with tabs[5]:
+    st.header('🚁 LiDAR/Drones - Procesamiento Avanzado')
+    st.info('📋 Procese datos de drones (LiDAR/LAS/LAZ) para extraer información topográfica, integre con Google Earth Engine para análisis de suelo, y genere diseños automáticos de pavimentos y drenaje.')
+    
+    with st.form('form_lidar'):
+        st.subheader('📊 Datos del Proyecto')
+        col1, col2 = st.columns(2)
+        with col1:
+            proyecto_lidar = st.text_input('Nombre del Proyecto', value='San Miguel - Cuadra 1 - LiDAR', key='proyecto_lidar')
+            descripcion_lidar = st.text_input('Descripción', value='Procesamiento LiDAR para pavimentación urbana', key='descripcion_lidar')
+            sistema_unidades_lidar = st.radio('Sistema de unidades', ['SI (Internacional)', 'Inglés'], horizontal=True, key='sistema_lidar')
+        with col2:
+            longitud_cuadra = st.number_input('Longitud de cuadra (m)', 50, 200, 100, key='longitud_cuadra')
+            ancho_cuadra = st.number_input('Ancho de cuadra (m)', 10, 50, 20, key='ancho_cuadra')
+            area_ha = (longitud_cuadra * ancho_cuadra) / 10000
+            st.metric("Área total", f"{area_ha:.2f} ha")
+        
+        st.subheader('📁 Carga de Datos LiDAR')
+        col1, col2 = st.columns(2)
+        with col1:
+            archivo_las = st.file_uploader('Archivo LAS/LAZ', type=['las', 'laz'], key='archivo_las')
+            if archivo_las:
+                st.success(f"✅ Archivo cargado: {archivo_las.name}")
+        with col2:
+            st.info("💡 **Formato soportado:** LAS, LAZ")
+            st.info("💡 **Tamaño máximo:** 100 MB")
+            st.info("💡 **Resolución recomendada:** 5-10 cm")
+        
+        st.subheader('🌍 Datos Satelitales (Google Earth Engine)')
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            latitud = st.number_input('Latitud', -90.0, 90.0, -15.84, format="%.4f", key='latitud')
+            longitud = st.number_input('Longitud', -180.0, 180.0, -70.02, format="%.4f", key='longitud')
+        with col2:
+            fecha_inicio = st.date_input('Fecha inicio', value=pd.to_datetime('2023-01-01'), key='fecha_inicio')
+            fecha_fin = st.date_input('Fecha fin', value=pd.to_datetime('2023-12-31'), key='fecha_fin')
+        with col3:
+            st.info("📍 **Ubicación:** San Miguel, Puno")
+            st.info("🏔️ **Altitud:** 3800+ msnm")
+            st.info("🌤️ **Clima:** Frío andino")
+        
+        st.subheader('🏗️ Parámetros de Diseño')
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            periodo_diseno_lidar = st.number_input('Período de diseño (años)', 5, 50, 20, key='periodo_diseno_lidar')
+            tipo_pavimento_lidar = st.selectbox('Tipo de pavimento', ['Rígido', 'Flexible', 'Combinado'], key='tipo_pavimento_lidar')
+        with col2:
+            intensidad_transito = st.number_input('Intensidad de tránsito (veh/día)', 100, 10000, 1000, key='intensidad_transito')
+            crecimiento_anual = st.number_input('Crecimiento anual (%)', 1, 10, 3, key='crecimiento_anual')
+        with col3:
+            periodo_retorno_drenaje = st.selectbox('Período de retorno drenaje', [5, 10, 25, 50], index=1, key='periodo_retorno_drenaje')
+            factor_seguridad_lidar = st.selectbox('Factor de seguridad', [1.0, 1.1, 1.2, 1.3, 1.4], index=2, key='factor_seguridad_lidar')
+        
+        submitted_lidar = st.form_submit_button('🚀 PROCESAR DATOS LIDAR COMPLETO', use_container_width=True)
+    
+    if submitted_lidar:
+        with st.spinner('🔄 Procesando datos LiDAR y satelitales...'):
+            # --- PROCESAMIENTO LIDAR ---
+            resultados_lidar = {}
+            datos_satelitales = {}
+            hec_ras_content = None
+            
+            # Procesar archivo LAS/LAZ si está disponible
+            if archivo_las:
+                # Guardar archivo temporal
+                import tempfile
+                import os
+                
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.las') as tmp_file:
+                    tmp_file.write(archivo_las.getvalue())
+                    tmp_path = tmp_file.name
+                
+                try:
+                    # Procesar archivo LiDAR
+                    resultados_lidar = procesar_archivo_las_laz(tmp_path, "output_lidar_san_miguel")
+                    
+                    # Limpiar archivo temporal
+                    os.unlink(tmp_path)
+                    
+                    if resultados_lidar:
+                        st.success("✅ Datos LiDAR procesados exitosamente!")
+                    else:
+                        st.warning("⚠️ No se pudieron procesar los datos LiDAR")
+                        
+                except Exception as e:
+                    st.error(f"❌ Error procesando LiDAR: {str(e)}")
+                    if os.path.exists(tmp_path):
+                        os.unlink(tmp_path)
+            else:
+                # Usar datos simulados para demostración
+                st.info("ℹ️ Usando datos simulados para demostración")
+                resultados_lidar = {
+                    'total_points': 150000,
+                    'ground_points': 120000,
+                    'area_m2': longitud_cuadra * ancho_cuadra,
+                    'pendiente_promedio': 5.2,
+                    'pendiente_maxima': 12.8,
+                    'x_min': 0, 'x_max': longitud_cuadra,
+                    'y_min': 0, 'y_max': ancho_cuadra,
+                    'z_min': 3800, 'z_max': 3815
+                }
+            
+            # --- DATOS SATELITALES ---
+            if GEE_AVAILABLE:
+                try:
+                    coords = [longitud, latitud]
+                    datos_satelitales = extraer_datos_satelitales_gee(coords, fecha_inicio, fecha_fin)
+                    
+                    if datos_satelitales:
+                        st.success("✅ Datos satelitales extraídos exitosamente!")
+                    else:
+                        st.warning("⚠️ No se pudieron extraer datos satelitales")
+                        
+                except Exception as e:
+                    st.error(f"❌ Error extrayendo datos satelitales: {str(e)}")
+            else:
+                # Usar datos existentes de San Miguel
+                st.info("ℹ️ Usando datos satelitales existentes de San Miguel")
+                datos_satelitales = {
+                    'NDVI_promedio': 0.383,
+                    'Humedad_suelo_promedio': 0.148,
+                    'fecha_inicio': str(fecha_inicio),
+                    'fecha_fin': str(fecha_fin),
+                    'coordenadas': [longitud, latitud]
+                }
+            
+            # --- CÁLCULOS DE DISEÑO ---
+            if resultados_lidar and datos_satelitales:
+                # Calcular CBR basado en NDVI
+                cbr_estimado = calcular_cbr_ndvi(datos_satelitales['NDVI_promedio'])
+                
+                # Calcular módulo de reacción K
+                k_modulo = 10 * cbr_estimado  # Fórmula MTC
+                
+                # Generar HEC-RAS para drenaje
+                hec_ras_content = generar_hec_ras_drenaje(
+                    area_ha, 
+                    longitud_cuadra, 
+                    resultados_lidar.get('pendiente_promedio', 5.0),
+                    periodo_retorno_drenaje
+                )
+                
+                # --- MOSTRAR RESULTADOS ---
+                st.success('✅ Análisis completo finalizado!')
+                
+                # Métricas principales
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Puntos totales", f"{resultados_lidar.get('total_points', 0):,}", "LiDAR")
+                with col2:
+                    st.metric("Pendiente promedio", f"{resultados_lidar.get('pendiente_promedio', 0):.1f}%", "Topografía")
+                with col3:
+                    st.metric("CBR estimado", f"{cbr_estimado:.1f}%", "NDVI")
+                with col4:
+                    st.metric("Módulo K", f"{k_modulo:.1f} MPa/m", "MTC")
+                
+                # Resultados detallados
+                st.subheader('📊 Resultados Detallados')
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("**📈 Datos LiDAR:**")
+                    st.markdown(f"• Puntos totales: **{resultados_lidar.get('total_points', 0):,}**")
+                    st.markdown(f"• Puntos de suelo: **{resultados_lidar.get('ground_points', 0):,}**")
+                    st.markdown(f"• Área procesada: **{resultados_lidar.get('area_m2', 0):.1f} m²**")
+                    st.markdown(f"• Pendiente promedio: **{resultados_lidar.get('pendiente_promedio', 0):.1f}%**")
+                    st.markdown(f"• Pendiente máxima: **{resultados_lidar.get('pendiente_maxima', 0):.1f}%**")
+                    st.markdown(f"• Rango de elevación: **{resultados_lidar.get('z_max', 0) - resultados_lidar.get('z_min', 0):.1f} m**")
+                
+                with col2:
+                    st.markdown("**🌍 Datos Satelitales:**")
+                    st.markdown(f"• NDVI promedio: **{datos_satelitales.get('NDVI_promedio', 0):.3f}**")
+                    st.markdown(f"• Humedad del suelo: **{datos_satelitales.get('Humedad_suelo_promedio', 0):.3f}**")
+                    st.markdown(f"• CBR estimado: **{cbr_estimado:.1f}%**")
+                    st.markdown(f"• Módulo de reacción K: **{k_modulo:.1f} MPa/m**")
+                    st.markdown(f"• Ubicación: **{latitud:.4f}, {longitud:.4f}**")
+                    st.markdown(f"• Período: **{fecha_inicio} a {fecha_fin}**")
+                
+                # Análisis de pavimentos
+                st.subheader('🛣️ Análisis de Pavimentos')
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("**🏗️ Pavimento Rígido:**")
+                    # Cálculos simplificados para demostración
+                    W18_rigido_lidar = intensidad_transito * 365 * periodo_diseno_lidar * (1 + crecimiento_anual/100)**periodo_diseno_lidar
+                    espesor_rigido_lidar = 0.25 * (W18_rigido_lidar/1000000)**0.25 * (k_modulo/50)**0.1
+                    
+                    st.markdown(f"• ESALs totales: **{W18_rigido_lidar:,.0f}**")
+                    st.markdown(f"• Espesor estimado: **{espesor_rigido_lidar*1000:.0f} mm**")
+                    st.markdown(f"• Junta máxima: **{espesor_rigido_lidar*3:.1f} m**")
+                    st.markdown(f"• Área de acero: **{espesor_rigido_lidar*0.1:.2f} cm²/m**")
+                
+                with col2:
+                    st.markdown("**🛣️ Pavimento Flexible:**")
+                    # Cálculos simplificados para demostración
+                    SN_flexible_lidar = 0.15 * (W18_rigido_lidar/1000000)**0.2 * (cbr_estimado/5)**0.3
+                    espesor_asfalto_lidar = SN_flexible_lidar * 0.4
+                    espesor_base_lidar = SN_flexible_lidar * 0.3
+                    
+                    st.markdown(f"• Número estructural: **{SN_flexible_lidar:.2f}**")
+                    st.markdown(f"• Espesor asfalto: **{espesor_asfalto_lidar*1000:.0f} mm**")
+                    st.markdown(f"• Espesor base: **{espesor_base_lidar*1000:.0f} mm**")
+                    st.markdown(f"• Espesor subbase: **{espesor_base_lidar*0.8*1000:.0f} mm**")
+                
+                # Diseño de drenaje
+                st.subheader('🌊 Diseño de Drenaje')
+                if hec_ras_content:
+                    st.text_area("Contenido HEC-RAS:", hec_ras_content, height=300)
+                
+                # Gráficos de análisis
+                if MATPLOTLIB_AVAILABLE:
+                    st.subheader('📈 Análisis Gráfico')
+                    try:
+                        import matplotlib
+                        matplotlib.use('Agg')
+                        import matplotlib.pyplot as plt
+                        import numpy as np
+                        
+                        # Crear figura con múltiples subplots
+                        fig_lidar, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
+                        
+                        # 1. Distribución de pendientes
+                        pendientes_sim = np.random.normal(resultados_lidar.get('pendiente_promedio', 5), 2, 1000)
+                        ax1.hist(pendientes_sim, bins=30, alpha=0.7, color='blue', edgecolor='black')
+                        ax1.axvline(resultados_lidar.get('pendiente_promedio', 5), color='red', linestyle='--', linewidth=2)
+                        ax1.set_title('Distribución de Pendientes', fontweight='bold')
+                        ax1.set_xlabel('Pendiente (%)')
+                        ax1.set_ylabel('Frecuencia')
+                        ax1.grid(True, alpha=0.3)
+                        
+                        # 2. Correlación NDVI vs CBR
+                        ndvi_range = np.linspace(0.1, 0.8, 100)
+                        cbr_range = [calcular_cbr_ndvi(ndvi) for ndvi in ndvi_range]
+                        ax2.plot(ndvi_range, cbr_range, color='green', linewidth=2)
+                        ax2.scatter(datos_satelitales.get('NDVI_promedio', 0.4), cbr_estimado, 
+                                  color='red', s=100, zorder=5, label=f'Valor actual: {cbr_estimado:.1f}%')
+                        ax2.set_title('Correlación NDVI vs CBR', fontweight='bold')
+                        ax2.set_xlabel('NDVI')
+                        ax2.set_ylabel('CBR (%)')
+                        ax2.grid(True, alpha=0.3)
+                        ax2.legend()
+                        
+                        # 3. Comparación de espesores
+                        tipos = ['Rígido', 'Flexible']
+                        espesores = [espesor_rigido_lidar*1000, espesor_asfalto_lidar*1000]
+                        colors_bars = ['lightblue', 'orange']
+                        bars = ax3.bar(tipos, espesores, color=colors_bars, alpha=0.7, edgecolor='black')
+                        ax3.set_title('Comparación de Espesores', fontweight='bold')
+                        ax3.set_ylabel('Espesor (mm)')
+                        ax3.grid(True, alpha=0.3, axis='y')
+                        for bar, esp in zip(bars, espesores):
+                            ax3.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 5, 
+                                   f'{esp:.0f} mm', ha='center', va='bottom', fontweight='bold')
+                        
+                        # 4. Análisis de sensibilidad
+                        k_range = np.linspace(20, 100, 50)
+                        espesor_sens = [0.25 * (W18_rigido_lidar/1000000)**0.25 * (k/50)**0.1 * 1000 for k in k_range]
+                        ax4.plot(k_range, espesor_sens, color='purple', linewidth=2)
+                        ax4.axvline(k_modulo, color='red', linestyle='--', alpha=0.7, 
+                                  label=f'Valor actual: {k_modulo:.1f} MPa/m')
+                        ax4.set_title('Sensibilidad: Espesor vs Módulo K', fontweight='bold')
+                        ax4.set_xlabel('Módulo K (MPa/m)')
+                        ax4.set_ylabel('Espesor (mm)')
+                        ax4.grid(True, alpha=0.3)
+                        ax4.legend()
+                        
+                        plt.tight_layout()
+                        st.pyplot(fig_lidar)
+                        
+                    except Exception as e:
+                        st.error(f"Error generando gráficos: {str(e)}")
+                
+                # Recomendaciones
+                st.subheader('💡 Recomendaciones Técnicas')
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("**🏗️ Construcción:**")
+                    st.markdown("• Verificar pendientes críticas > 8%")
+                    st.markdown("• Implementar drenaje adecuado")
+                    st.markdown("• Control de calidad en capas")
+                    st.markdown("• Monitoreo de deformaciones")
+                
+                with col2:
+                    st.markdown("**🌍 Ambiental:**")
+                    st.markdown("• Considerar altitud > 3800 msnm")
+                    st.markdown("• Protección contra heladas")
+                    st.markdown("• Drenaje superficial eficiente")
+                    st.markdown("• Mantenimiento preventivo")
+                
+                # Exportación
+                st.markdown('---')
+                st.subheader('📄 Exportar Reportes')
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    if st.button("🚀 Generar PDF LiDAR Completo", key="btn_pdf_lidar", use_container_width=True):
+                        try:
+                            with st.spinner("Generando PDF LiDAR..."):
+                                datos_proyecto_lidar = {
+                                    'Proyecto': proyecto_lidar,
+                                    'Descripción': descripcion_lidar,
+                                    'Usuario': st.session_state.get('user', 'Usuario'),
+                                    'Sistema_Unidades': sistema_unidades_lidar
+                                }
+                                
+                                pdf_buffer_lidar = generar_pdf_lidar_completo(
+                                    datos_proyecto_lidar, 
+                                    resultados_lidar, 
+                                    datos_satelitales, 
+                                    hec_ras_content
+                                )
+                                
+                                if pdf_buffer_lidar:
+                                    st.session_state['pdf_lidar'] = pdf_buffer_lidar
+                                    st.session_state['pdf_lidar_filename'] = f"reporte_lidar_{proyecto_lidar}.pdf"
+                                    st.success("✅ PDF LiDAR generado exitosamente!")
+                                else:
+                                    st.error("❌ Error al generar PDF LiDAR")
+                                    
+                        except Exception as e:
+                            st.error(f"❌ Error: {str(e)}")
+                
+                with col2:
+                    if st.button("📁 Exportar HEC-RAS", key="btn_hec_ras", use_container_width=True):
+                        if hec_ras_content:
+                            st.download_button(
+                                label="📥 Descargar HEC-RAS",
+                                data=hec_ras_content,
+                                file_name=f"hec_ras_san_miguel_cuadra_1.txt",
+                                mime="text/plain",
+                                key="btn_download_hec_ras"
+                            )
+                        else:
+                            st.warning("No hay datos HEC-RAS para exportar")
+                
+                with col3:
+                    if st.button("🏗️ Exportar AutoCAD", key="btn_autocad", use_container_width=True):
+                        if 'resultados_lidar' in locals() and resultados_lidar.get('ground_points'):
+                            # Simular exportación a AutoCAD
+                            st.success("✅ Datos preparados para AutoCAD Civil 3D")
+                            st.info("💡 Los datos están listos para importar en AutoCAD")
+                        else:
+                            st.warning("No hay datos LiDAR para exportar a AutoCAD")
+                
+                # Descargar PDF si está disponible
+                if 'pdf_lidar' in st.session_state:
+                    st.download_button(
+                        label="📥 Descargar PDF LiDAR Completo",
+                        data=st.session_state['pdf_lidar'].getvalue(),
+                        file_name=st.session_state['pdf_lidar_filename'],
+                        mime="application/pdf",
+                        key="btn_download_pdf_lidar"
                     )

@@ -1,0 +1,585 @@
+{
+  "informacion_proyecto": {
+    "nombre": "San Miguel - Cuadra 1",
+    "ubicacion": "San Miguel, Puno, Perú",
+    "fecha_estudio": "2025-07-13",
+    "ingeniero_responsable": "Ing. Civil - UNI",
+    "cliente": "Municipalidad de San Miguel",
+    "tipo_obra": "Pavimentación urbana",
+    "longitud_cuadra": 100,
+    "ancho_calzada": 6.0,
+    "ancho_veredas": 2.0
+  },
+  "coordenadas": {
+    "latitud": -15.2345,
+    "longitud": -70.1234,
+    "altitud": 3850,
+    "utm_zone": "18S",
+    "utm_coords": [
+      100,
+      8000
+    ]
+  },
+  "fecha_reporte": "2025-07-13 19:23:46",
+  "resumen_ejecutivo": {
+    "proyecto": "San Miguel - Cuadra 1",
+    "ubicacion": "San Miguel, Puno, Perú",
+    "tipo_pavimento_recomendado": "Rígido",
+    "espesor_recomendado": "20.5 cm",
+    "costo_estimado": "S/ 18,450",
+    "duracion_obra": "25 días",
+    "vida_util": "25 años"
+  },
+  "datos_lidar": {
+    "datos_vuelo": {
+      "archivo_las": "san_miguel_cuadra_1.las",
+      "fecha_vuelo": "2024-01-15",
+      "altura_vuelo": 120,
+      "resolucion_terreno": 0.05,
+      "cobertura": 85,
+      "puntos_por_m2": 400,
+      "area_cuadra": 0.08,
+      "coordenadas_utm": [
+        100,
+        8000
+      ]
+    },
+    "resultado_procesamiento": {
+      "Proyecto": "San Miguel - Cuadra 1",
+      "Fecha_Procesamiento": "2024",
+      "Datos_LiDAR": {
+        "Área_ha": 100.0,
+        "Pendiente_%": 3.05,
+        "Zonas_inestables": {
+          "Pendiente_excesiva": 9907.0,
+          "Curvatura_alta": 9536.0,
+          "Zonas_hundimiento": 4775.0,
+          "Recomendación": "Realizar estudio geotécnico detallado en zonas críticas"
+        },
+        "Puntos_procesados": 363160,
+        "Resolución_MDT": 1.0,
+        "Archivo_GeoTIFF": "mdt_terreno.tif",
+        "Estado": "✅ Procesamiento completado exitosamente"
+      },
+      "Curvas_Nivel": {
+        "niveles": [
+          3859.214286367396,
+          3859.714286367396,
+          3860.214286367396,
+          3860.714286367396,
+          3861.214286367396,
+          3861.714286367396,
+          3862.214286367396,
+          3862.714286367396,
+          3863.214286367396,
+          3863.714286367396,
+          3864.214286367396,
+          3864.714286367396,
+          3865.214286367396,
+          3865.714286367396,
+          3866.214286367396,
+          3866.714286367396,
+          3867.214286367396,
+          3867.714286367396,
+          3868.214286367396,
+          3868.714286367396,
+          3869.214286367396,
+          3869.714286367396,
+          3870.214286367396,
+          3870.714286367396,
+          3871.214286367396
+        ],
+        "intervalo": 0.5,
+        "total_curvas": 25,
+        "elevacion_min": 3859.21,
+        "elevacion_max": 3871.41
+      },
+      "Analisis_Drenaje": {
+        "Pendiente_promedio_%": 133.06,
+        "Pendiente_minima_%": 0.38,
+        "Pendiente_maxima_%": 552.27,
+        "Cumple_RAS_2020": "True",
+        "Recomendacion_cunetas": "Pendiente adecuada para drenaje superficial"
+      },
+      "Archivos_Generados": [
+        "mdt_terreno.tif",
+        "curvas_nivel.shp",
+        "analisis_drenaje.pdf"
+      ],
+      "Estado": "✅ Procesamiento LiDAR completado exitosamente"
+    }
+  },
+  "datos_suelo": {
+    "tipo_suelo": "volcánico",
+    "clima": "sierra",
+    "altitud_msnm": 3850,
+    "temperatura_promedio": 8.5,
+    "precipitacion_anual": 650,
+    "ensayos_laboratorio": {
+      "CBR": 4.5,
+      "k_modulo": 45,
+      "densidad_maxima": 1.85,
+      "humedad_optima": 12.5,
+      "plasticidad": "NP",
+      "granulometria": "Grava limosa (GM)"
+    },
+    "estudios_geotecnicos": {
+      "profundidad_estudio": 2.0,
+      "nivel_freatico": 3.5,
+      "capacidad_portante": 120,
+      "angulo_friccion": 32,
+      "cohesion": 15
+    },
+    "recomendaciones": [
+      "Suelo volcánico con presencia de cenizas",
+      "Requiere estabilización con cemento o cal",
+      "Considerar drenaje subterráneo por humedad",
+      "Compactación al 95% Proctor Modificado"
+    ]
+  },
+  "datos_transito": {
+    "tipo_via": "urbana",
+    "clasificacion": "Colectora",
+    "proyecto": "San Miguel - Cuadra 1",
+    "periodo_diseno": 20,
+    "crecimiento_anual": 3.5,
+    "conteo_vehicular": {
+      "automoviles": 150,
+      "camiones_pequenos": 25,
+      "camiones_medianos": 8,
+      "camiones_grandes": 2,
+      "buses": 12,
+      "total_diario": 197
+    },
+    "factores_equivalencia": {
+      "automoviles": 0.0001,
+      "camiones_pequenos": 0.012,
+      "camiones_medianos": 0.176,
+      "camiones_grandes": 1.0,
+      "buses": 0.119
+    },
+    "ESALs_calculados": {
+      "ESALs_diario": 2.8,
+      "ESALs_anual": 1022,
+      "ESALs_periodo": 500000,
+      "factor_direccion": 0.5,
+      "factor_carril": 1.0,
+      "ESALs_diseno": 250000
+    },
+    "caracteristicas_especiales": [
+      "Tránsito urbano con presencia de vehículos pesados",
+      "Acceso a mercado central",
+      "Ruta de transporte público",
+      "Considerar carga de estacionamiento"
+    ]
+  },
+  "diseno_pavimento": {
+    "proyecto": "San Miguel - Cuadra 1",
+    "fecha_diseno": "2024",
+    "datos_lidar": {
+      "Área_ha": 100.0,
+      "Pendiente_%": 3.05,
+      "Zonas_inestables": {
+        "Pendiente_excesiva": 9907.0,
+        "Curvatura_alta": 9536.0,
+        "Zonas_hundimiento": 4775.0,
+        "Recomendación": "Realizar estudio geotécnico detallado en zonas críticas"
+      },
+      "Puntos_procesados": 363160,
+      "Resolución_MDT": 1.0,
+      "Archivo_GeoTIFF": "mdt_terreno.tif",
+      "Estado": "✅ Procesamiento completado exitosamente"
+    },
+    "drenaje_analisis": {
+      "cumple_ras_2020": true,
+      "recomendacion": "Pendiente adecuada para drenaje superficial",
+      "pendiente_actual": 3.05,
+      "tipo_cuneta": "Triangular estándar"
+    },
+    "recomendaciones": [
+      "Pavimento rígido: 22.2 cm con juntas cada 66.7 m",
+      "Pavimento flexible: Base 10 cm + Subbase 15 cm"
+    ],
+    "pavimento_rigido": {
+      "espesor_cm": 22.2,
+      "espesor_mm": 222.4,
+      "juntas_transversales_m": 66.7,
+      "juntas_longitudinales_m": 100.1,
+      "fatiga": {
+        "factor": 611.786,
+        "porcentaje": 100,
+        "estado": "Crítico"
+      },
+      "refuerzo": {
+        "tipo": "Acero G60 @ 91.77 kg/m³",
+        "motivo": "Fatiga alta",
+        "norma": "E.060 - Refuerzo por temperatura"
+      },
+      "concreto_recomendado": "NP 350 (MR ≥ 4.5 MPa)",
+      "norma_aplicada": "IT.EC.030 + DG-2018",
+      "factor_climatico": 1.3,
+      "factor_via": 1.0,
+      "estado": "✅ Diseño válido según normativas peruanas"
+    },
+    "pavimento_flexible": {
+      "numero_estructural": 0.0,
+      "espesor_base_cm": 10,
+      "espesor_subbase_cm": 15,
+      "espesor_total_cm": 25,
+      "materiales": {
+        "base": "Grava A-2-4 (CBR ≥ 20%)",
+        "subbase": "Material granular CBR ≥ 15%",
+        "asfalto": "Asfalto AC-20 (Norma IT.EC.020)"
+      },
+      "CBR_ajustado": 4.5,
+      "factor_suelo": 1.1,
+      "factor_climatico": 1.2,
+      "compactacion": "95% Proctor Modificado",
+      "norma_aplicada": "Art. 410.3 MTC + AASHTO 93",
+      "estado": "✅ Diseño válido según normativas peruanas"
+    },
+    "comparacion": {
+      "costo_rigido_soles": 3330.0,
+      "costo_flexible_soles": 1400,
+      "vida_util_rigido_anos": 15,
+      "vida_util_flexible_anos": 20,
+      "recomendacion": "Flexible",
+      "justificacion": "Mayor durabilidad"
+    },
+    "estado": "✅ Diseño automatizado completado exitosamente"
+  },
+  "interoperabilidad": {
+    "proyecto": "San Miguel - Cuadra 1",
+    "fecha_exportacion": "2024",
+    "archivos_generados": [
+      "San Miguel - Cuadra 1_diseño.dwg",
+      "San Miguel - Cuadra 1_analisis.qgz",
+      "San Miguel - Cuadra 1_modelo.rvt",
+      "mdt_terreno.tif",
+      "curvas_nivel.shp"
+    ],
+    "civil3d": {
+      "archivo_dwg": "San Miguel - Cuadra 1_diseño.dwg",
+      "capas_creadas": [
+        {
+          "nombre": "PAVIMENTO_RIGIDO",
+          "color": 5,
+          "tipo_linea": "CONTINUOUS"
+        },
+        {
+          "nombre": "PAVIMENTO_FLEXIBLE",
+          "color": 2,
+          "tipo_linea": "CONTINUOUS"
+        },
+        {
+          "nombre": "JUNTAS",
+          "color": 1,
+          "tipo_linea": "DASHED"
+        },
+        {
+          "nombre": "CUNETAS",
+          "color": 3,
+          "tipo_linea": "CONTINUOUS"
+        },
+        {
+          "nombre": "COTAS",
+          "color": 7,
+          "tipo_linea": "CONTINUOUS"
+        }
+      ],
+      "geometria_pavimento": {
+        "tipo": "POLYLINE",
+        "capa": "PAVIMENTO_RIGIDO",
+        "vertices": [
+          [
+            100,
+            8000
+          ],
+          [
+            200,
+            8000
+          ],
+          [
+            200,
+            8006.0
+          ],
+          [
+            100,
+            8006.0
+          ],
+          [
+            100,
+            8000
+          ]
+        ],
+        "cerrada": true,
+        "espesor": 22.2
+      },
+      "juntas": [
+        {
+          "tipo": "JUNTA_LONGITUDINAL",
+          "capa": "JUNTAS",
+          "inicio": [
+            100,
+            8003.0
+          ],
+          "fin": [
+            200,
+            8003.0
+          ],
+          "espaciamiento": 100.1
+        }
+      ],
+      "cunetas": [
+        {
+          "tipo": "CUNETA_LATERAL",
+          "capa": "CUNETAS",
+          "inicio": [
+            100,
+            7998.0
+          ],
+          "fin": [
+            200,
+            7998.0
+          ],
+          "seccion": "Triangular",
+          "pendiente": 3.05
+        },
+        {
+          "tipo": "CUNETA_LATERAL",
+          "capa": "CUNETAS",
+          "inicio": [
+            100,
+            8008.0
+          ],
+          "fin": [
+            200,
+            8008.0
+          ],
+          "seccion": "Triangular",
+          "pendiente": 3.05
+        }
+      ],
+      "anotaciones": [
+        {
+          "tipo": "COTA_ESPESOR",
+          "capa": "COTAS",
+          "posicion": [
+            150,
+            8003
+          ],
+          "texto": "Espesor: 22.2 cm",
+          "altura_texto": 0.5
+        },
+        {
+          "tipo": "NOTA_JUNTAS",
+          "capa": "COTAS",
+          "posicion": [
+            150,
+            8001
+          ],
+          "texto": "Juntas: 66.7 m",
+          "altura_texto": 0.3
+        }
+      ],
+      "coordenadas_utm": [
+        100,
+        8000
+      ],
+      "epsg": "32718",
+      "estado": "✅ Exportación a Civil 3D completada"
+    },
+    "qgis": {
+      "proyecto_qgis": "San Miguel - Cuadra 1_analisis.qgz",
+      "proyeccion": "EPSG:32718",
+      "capas": [
+        {
+          "nombre": "MDT_Terreno",
+          "tipo": "raster",
+          "archivo": "mdt_terreno.tif",
+          "descripcion": "Modelo Digital del Terreno desde LiDAR"
+        },
+        {
+          "nombre": "Curvas_Nivel",
+          "tipo": "vector",
+          "archivo": "curvas_nivel.shp",
+          "descripcion": "Curvas de nivel cada 0.5m"
+        },
+        {
+          "nombre": "Pavimento_Diseno",
+          "tipo": "vector",
+          "archivo": "pavimento_diseno.shp",
+          "descripcion": "Diseño de pavimento"
+        },
+        {
+          "nombre": "Zonas_Criticas",
+          "tipo": "vector",
+          "archivo": "zonas_criticas.shp",
+          "descripcion": "Zonas inestables detectadas"
+        }
+      ],
+      "analisis_geotecnico": {
+        "pendiente_promedio": 3.05,
+        "zonas_inestables": {
+          "Pendiente_excesiva": 9907.0,
+          "Curvatura_alta": 9536.0,
+          "Zonas_hundimiento": 4775.0,
+          "Recomendación": "Realizar estudio geotécnico detallado en zonas críticas"
+        },
+        "recomendaciones": [
+          "Realizar estudio geotécnico detallado en zonas críticas",
+          "Verificar estabilidad de taludes",
+          "Considerar drenaje subterráneo si es necesario"
+        ]
+      },
+      "estado": "✅ Proyecto QGIS creado exitosamente"
+    },
+    "revit": {
+      "archivo_revit": "San Miguel - Cuadra 1_modelo.rvt",
+      "modelo_3d": {
+        "elementos": [
+          {
+            "tipo": "Pavimento_Rigido",
+            "familia": "Pavimento_Rigido.rfa",
+            "dimensiones": {
+              "largo": 100,
+              "ancho": 6,
+              "espesor": 0.222
+            },
+            "volumen": 133.2,
+            "material": "Concreto NP 350"
+          },
+          {
+            "tipo": "Pavimento_Flexible",
+            "familia": "Pavimento_Flexible.rfa",
+            "dimensiones": {
+              "largo": 100,
+              "ancho": 6,
+              "espesor": 0.25
+            },
+            "volumen": 150.0,
+            "material": "Asfalto AC-20"
+          }
+        ],
+        "volumen_total_m3": 283.2,
+        "area_total_m2": 600
+      },
+      "programacion_4d": {
+        "actividades": [
+          {
+            "actividad": "Preparación de terreno",
+            "duracion_dias": 5,
+            "predecesor": null,
+            "recursos": [
+              "Excavadora",
+              "Niveladora"
+            ]
+          },
+          {
+            "actividad": "Subrasante",
+            "duracion_dias": 3,
+            "predecesor": "Preparación de terreno",
+            "recursos": [
+              "Compactadora",
+              "Material granular"
+            ]
+          },
+          {
+            "actividad": "Subbase",
+            "duracion_dias": 4,
+            "predecesor": "Subrasante",
+            "recursos": [
+              "Compactadora",
+              "Grava"
+            ]
+          },
+          {
+            "actividad": "Losa de concreto",
+            "duracion_dias": 8,
+            "predecesor": "Subbase",
+            "recursos": [
+              "Mezcladora",
+              "Concreto NP 350"
+            ]
+          },
+          {
+            "actividad": "Juntas y sellado",
+            "duracion_dias": 3,
+            "predecesor": "Losa de concreto",
+            "recursos": [
+              "Sierra",
+              "Sellador"
+            ]
+          },
+          {
+            "actividad": "Base granular",
+            "duracion_dias": 5,
+            "predecesor": "Subrasante",
+            "recursos": [
+              "Compactadora",
+              "Grava A-1-a"
+            ]
+          },
+          {
+            "actividad": "Capa asfáltica",
+            "duracion_dias": 6,
+            "predecesor": "Base granular",
+            "recursos": [
+              "Pavimentadora",
+              "Asfalto AC-20"
+            ]
+          }
+        ],
+        "duracion_total_dias": 34,
+        "duracion_total_semanas": 5,
+        "ruta_critica": "Preparación → Subrasante → Subbase → Losa → Juntas"
+      },
+      "analisis_costos": {
+        "costos_desglosados": {
+          "materiales": 28380.0,
+          "mano_obra": 19656.0,
+          "equipos": 9828.0,
+          "total": 57864.0
+        },
+        "costo_por_m2": 96.44,
+        "moneda": "Soles (PEN)"
+      },
+      "familias_utilizadas": [
+        "Pavimento_Rigido.rfa",
+        "Pavimento_Flexible.rfa",
+        "Cuneta_Triangular.rfa",
+        "Junta_Expansion.rfa"
+      ],
+      "estado": "✅ Exportación a Revit BIM completada"
+    },
+    "estado": "✅ Flujo de trabajo unificado completado"
+  },
+  "conclusiones": [
+    "El suelo volcánico de San Miguel requiere estabilización previa",
+    "La pendiente del 5.2% es adecuada para drenaje superficial",
+    "El pavimento rígido es más económico a largo plazo",
+    "Se recomienda juntas cada 61.5m transversales y 92.3m longitudinales",
+    "El proyecto cumple con todas las normativas peruanas vigentes"
+  ],
+  "recomendaciones": [
+    "Realizar estabilización de subrasante con cemento al 3%",
+    "Implementar drenaje subterráneo en zonas críticas",
+    "Usar concreto NP 350 con MR ≥ 4.5 MPa",
+    "Monitorear juntas durante los primeros 6 meses",
+    "Programar mantenimiento preventivo cada 5 años"
+  ],
+  "normativas_aplicadas": [
+    "DG-2018: Diseño de Pavimentos Rígidos",
+    "IT.EC.030: Especificaciones Técnicas de Concreto",
+    "RAS 2020: Drenaje Superficial",
+    "MTC 2023: Estabilización de Subrasantes",
+    "AASHTO 93: Método de Diseño (modificado para Perú)"
+  ],
+  "archivos_generados": [
+    "san_miguel_diseño.dwg",
+    "san_miguel_analisis.qgz",
+    "san_miguel_modelo.rvt",
+    "san_miguel_reporte.pdf",
+    "san_miguel_especificaciones.pdf"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "fecha": "2025-07-13 19:23:47",
+  "resultados": {
+    "Importaciones": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true
+    ],
+    "Módulo San Miguel": true,
+    "Compatibilidad Streamlit": true,
+    "Estructura de la App": true,
+    "Serialización JSON": true
+  },
+  "total_passed": 5,
+  "total_tests": 5,
+  "status": "EXITOSO"
+}

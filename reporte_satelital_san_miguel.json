@@ -1,28 +1,28 @@
 {
   "proyecto": "San Miguel - Cuadra 1",
-  "fecha_analisis": "2025-07-13 19:07:03",
+  "fecha_analisis": "2025-07-13 19:19:14",
   "resumen_ejecutivo": {
-    "NDVI_promedio": 0.383,
+    "NDVI_promedio": 0.301,
     "tipo_suelo_estimado": "Suelo volcánico/pobre",
-    "CBR_estimado": 3.116876083272725,
-    "precipitacion_anual": 640.8,
+    "CBR_estimado": 3.6091152134087032,
+    "precipitacion_anual": 790.0,
     "recomendacion_principal": "Requiere estabilización previa"
   },
   "datos_completos": {
     "datos_suelo": {
-      "NDVI_promedio": 0.383,
-      "NDVI_minimo": 0.252,
-      "NDVI_maximo": 0.557,
-      "Humedad_suelo_promedio": 0.148,
-      "Humedad_suelo_minima": 0.09,
-      "Humedad_suelo_maxima": 0.247,
-      "Precipitacion_anual": 640.8,
-      "Precipitacion_mensual_promedio": 68.2,
-      "Temperatura_promedio": 9.2,
-      "Evapotranspiracion": 946.1,
-      "Indice_aridez": 0.61,
+      "NDVI_promedio": 0.301,
+      "NDVI_minimo": 0.257,
+      "NDVI_maximo": 0.505,
+      "Humedad_suelo_promedio": 0.145,
+      "Humedad_suelo_minima": 0.086,
+      "Humedad_suelo_maxima": 0.23,
+      "Precipitacion_anual": 790.0,
+      "Precipitacion_mensual_promedio": 54.2,
+      "Temperatura_promedio": 10.6,
+      "Evapotranspiracion": 804.7,
+      "Indice_aridez": 0.6,
       "Clasificacion_suelo": "Suelo volcánico con baja retención de humedad",
-      "CBR_estimado_NDVI": 4.7,
+      "CBR_estimado_NDVI": 5.3,
       "Recomendaciones": [
         "Suelo volcánico requiere estabilización con cemento",
         "Baja retención de humedad - considerar drenaje subterráneo",
@@ -54,12 +54,12 @@
     "estado": "✅ Datos satelitales extraídos exitosamente"
   },
   "analisis_hidrologico": {
-    "precipitacion_mm": 640.8,
+    "precipitacion_mm": 790.0,
     "area_ha": 0.08,
     "coeficiente_escorrentia": 0.7,
-    "volumen_escorrentia_m3": 358.85,
-    "caudal_m3_s": 0.0997,
-    "caudal_l_s": 99.7
+    "volumen_escorrentia_m3": 442.4,
+    "caudal_m3_s": 0.1229,
+    "caudal_l_s": 122.9
   },
   "archivos_generados": [
     "datos_satelitales_san_miguel.csv",

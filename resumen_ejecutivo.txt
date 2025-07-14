@@ -1,0 +1,24 @@
+CASO PRÁCTICO - SAN MIGUEL, PUNO
+==================================================
+
+Proyecto: San Miguel - Cuadra 1
+Ubicación: San Miguel, Puno, Perú
+Tipo Pavimento: Rígido
+Espesor: 20.5 cm
+Costo: S/ 18,450
+Duración: 25 días
+Vida Útil: 25 años
+
+CONCLUSIONES:
+1. El suelo volcánico de San Miguel requiere estabilización previa
+2. La pendiente del 5.2% es adecuada para drenaje superficial
+3. El pavimento rígido es más económico a largo plazo
+4. Se recomienda juntas cada 61.5m transversales y 92.3m longitudinales
+5. El proyecto cumple con todas las normativas peruanas vigentes
+
+RECOMENDACIONES:
+1. Realizar estabilización de subrasante con cemento al 3%
+2. Implementar drenaje subterráneo en zonas críticas
+3. Usar concreto NP 350 con MR ≥ 4.5 MPa
+4. Monitorear juntas durante los primeros 6 meses
+5. Programar mantenimiento preventivo cada 5 años

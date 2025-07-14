@@ -1,0 +1,36 @@
+{
+  "fecha_prueba": "2025-07-13 18:09:57",
+  "pruebas_realizadas": [
+    {
+      "nombre": "Módulo LiDAR",
+      "estado": "exitoso",
+      "fecha": "18:12:55"
+    },
+    {
+      "nombre": "Módulo Diseño",
+      "estado": "fallido",
+      "fecha": "18:12:55"
+    },
+    {
+      "nombre": "Interoperabilidad",
+      "estado": "fallido",
+      "fecha": "18:12:55"
+    },
+    {
+      "nombre": "Caso Práctico",
+      "estado": "fallido",
+      "fecha": "18:16:17"
+    },
+    {
+      "nombre": "Aplicación Principal",
+      "estado": "exitoso",
+      "fecha": "18:16:17"
+    }
+  ],
+  "resumen": {
+    "total_pruebas": 5,
+    "exitosas": 2,
+    "fallidas": 3,
+    "no_disponibles": 0
+  }
+}

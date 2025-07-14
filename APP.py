@@ -1198,10 +1198,13 @@ def calcular_espesor_losa_rigido(W18, k, R, C, Sc, J, Ec, sistema_unidades):
         D = calcular_espesor_losa_AASHTO93(W18_lim, ZR, S0, delta_PSI, Sc, J, k, C)
         
         # Convertir unidades según el sistema seleccionado
-        if sistema_unidades == "Sistema Internacional (SI)":
-            # Convertir de pulgadas a mm
-            D = D * 25.4
-        # Si es sistema inglés, mantener en pulgadas
+        if D is not None:
+            if sistema_unidades == "Sistema Internacional (SI)":
+                # Convertir de pulgadas a mm
+                D = D * 25.4
+            # Si es sistema inglés, mantener en pulgadas
+        else:
+            D = 8.0  # Valor por defecto
         
         return D
     except Exception:
@@ -1390,6 +1393,27 @@ def calcular_espesor_losa_AASHTO93(W18, ZR, S0, delta_PSI, Sc, J, k, C, D_init=8
     # FÓRMULA OFICIAL AASHTO 93 para pavimento rígido
     # Todas las unidades en sistema inglés: D en pulgadas, Sc en psi, k en pci
     # Iterativo: se ajusta D hasta que log10(W18_calc) ~= log10(W18)
+    import math
+    D = D_init
+    for _ in range(20):  # Máximo 20 iteraciones
+        # Calcular W18 usando la fórmula AASHTO 93
+        log10_W18_calc = ZR * S0 + 7.35 * math.log10(D + 1) - 0.06 + \
+                        math.log10(delta_PSI / (4.5 - 1.5)) / (1 + 1.624 * 10**7 / (D + 1)**8.46) + \
+                        (4.22 - 0.32 * math.log10(Sc)) * math.log10(Sc / 215.63 * J * (D**0.75 - 1.132)) - \
+                        (4.22 - 0.32 * math.log10(Sc)) * math.log10(215.63 * J * (D**0.75 - 1.132) / (18.42 * (Ec / 1000)**0.25)) + \
+                        (4.22 - 0.32 * math.log10(Sc)) * math.log10(18.42 * (Ec / 1000)**0.25 / (k / 1000))
+        
+        W18_calc = 10**log10_W18_calc
+        
+        # Ajustar D
+        if abs(W18_calc - W18) / W18 < 0.01:  # 1% de tolerancia
+            break
+        elif W18_calc > W18:
+            D += 0.5
+        else:
+            D -= 0.5
+    
+    return D
 
 # --- FUNCIONES PARA PROCESAMIENTO DE DATOS LIDAR/DRONES ---
 
@@ -2189,8 +2213,15 @@ with col_der:
 
                 # Análisis de fatiga y erosión (simplificado)
                 D_actual = calcular_espesor_losa_rigido(W18, k_analisis, R, C, Sc, J, Ec, sistema_unidades)
-                fatiga_actual = (W18 / (10**7)) * (D_actual / Sc) ** 3.42  # Simplificado
-                erosion_actual = (W18 / (10**6)) * (D_actual / k_analisis) ** 7.35  # Simplificado
+                if D_actual is not None and Sc > 0:
+                    fatiga_actual = (W18 / (10**7)) * (D_actual / Sc) ** 3.42  # Simplificado
+                else:
+                    fatiga_actual = 0.0
+                
+                if D_actual is not None and k_analisis > 0:
+                    erosion_actual = (W18 / (10**6)) * (D_actual / k_analisis) ** 7.35  # Simplificado
+                else:
+                    erosion_actual = 0.0
 
                 col1, col2, col3 = st.columns(3)
                 with col1:
@@ -2221,9 +2252,20 @@ with col_der:
                 st.markdown("### 📊 Análisis de Sensibilidad Numérico")
 
                 # Calcular sensibilidad (% cambio en D por % cambio en parámetro)
-                sens_k = abs((D_k[25] - D_k[24]) / D_k[24]) / abs((k_range[25] - k_range[24]) / k_range[24])
-                sens_Sc = abs((D_Sc[25] - D_Sc[24]) / D_Sc[24]) / abs((Sc_range[25] - Sc_range[24]) / Sc_range[24])
-                sens_W18 = abs((D_W18[25] - D_W18[24]) / D_W18[24]) / abs((W18_range[25] - W18_range[24]) / W18_range[24])
+                if D_k[25] is not None and D_k[24] is not None and D_k[24] != 0:
+                    sens_k = abs((D_k[25] - D_k[24]) / D_k[24]) / abs((k_range[25] - k_range[24]) / k_range[24])
+                else:
+                    sens_k = 0.0
+                
+                if D_Sc[25] is not None and D_Sc[24] is not None and D_Sc[24] != 0:
+                    sens_Sc = abs((D_Sc[25] - D_Sc[24]) / D_Sc[24]) / abs((Sc_range[25] - Sc_range[24]) / Sc_range[24])
+                else:
+                    sens_Sc = 0.0
+                
+                if D_W18[25] is not None and D_W18[24] is not None and D_W18[24] != 0:
+                    sens_W18 = abs((D_W18[25] - D_W18[24]) / D_W18[24]) / abs((W18_range[25] - W18_range[24]) / W18_range[24])
+                else:
+                    sens_W18 = 0.0
 
                 sensibilidad_df = pd.DataFrame({
                     'Parámetro': ['Módulo de reacción (k)', 'Módulo de rotura (Sc)', 'Tránsito (W18)'],
@@ -2322,11 +2364,11 @@ with col_der:
                             gamma_c = 2400  # peso unitario
                             f = 1.5  # coef. fricción
                             mu = 1.0  # coef. fricción
-                            w = D_actual * 1.0  # peso de losa (simplificado)
-                            L_junta_pdf = calcular_junta_L(sigma_t, gamma_c, f, mu, w, sistema_unidades)
+                            w = D_actual * 1.0 if D_actual is not None else 8.0  # peso de losa (simplificado)
+                            L_junta_pdf = calcular_junta_L(D_actual, Sc, sistema_unidades)
                             fa = 1.5
                             fs = acero_fy if 'acero_fy' in locals() else 280
-                            As_temp_pdf = calcular_As_temp(gamma_c, L_junta_pdf, D_actual, fa, fs, sistema_unidades)
+                            As_temp_pdf = calcular_As_temp(D_actual, L_junta_pdf, fs, sistema_unidades)
                             
                             resultados_data = [
                                 ['Resultados del Análisis', 'Valor', 'Estado'],
@@ -2541,11 +2583,14 @@ with tabs[0]:
             # Calcular espesor de losa
             D_pulg_rigido = calcular_espesor_losa_AASHTO93(W18_rigido, ZR_rigido, S0_rigido, delta_PSI_rigido, Sc_calc_rigido, J_rigido, k_calc_rigido, C_rigido)
             
-            if sistema_unidades_rigido == "SI (Internacional)":
-                D_rigido = D_pulg_rigido * 25.4  # mm
-                unidad_espesor_rigido = "mm"
+            if D_pulg_rigido is not None:
+                if sistema_unidades_rigido == "SI (Internacional)":
+                    D_rigido = D_pulg_rigido * 25.4  # mm
+                    unidad_espesor_rigido = "mm"
+                else:
+                    D_rigido = D_pulg_rigido
             else:
-                D_rigido = D_pulg_rigido
+                D_rigido = 8.0  # Valor por defecto
                 unidad_espesor_rigido = "pulg"
             
             # Calcular juntas (usando función corregida)

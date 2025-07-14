@@ -1,109 +1,98 @@
 #!/usr/bin/env python3
 """
-Script de verificación para CONSORCIO DEJ - Análisis Estructural
-Verifica que todas las dependencias estén instaladas correctamente
+Script de verificación de dependencias para CONSORCIO DEJ
+Software de Diseño de Pavimentos
 """
 
 import sys
 import importlib
 
-def verificar_modulo(nombre_modulo, nombre_mostrar=None):
-    """Verificar si un módulo está disponible"""
-    if nombre_mostrar is None:
-        nombre_mostrar = nombre_modulo
+def verificar_dependencia(nombre, import_name=None):
+    """Verifica si una dependencia está instalada"""
+    if import_name is None:
+        import_name = nombre
     
     try:
-        importlib.import_module(nombre_modulo)
-        print(f"✅ {nombre_mostrar} - OK")
+        importlib.import_module(import_name)
+        print(f"✅ {nombre} - INSTALADO")
         return True
     except ImportError:
-        print(f"❌ {nombre_mostrar} - NO DISPONIBLE")
+        print(f"❌ {nombre} - NO INSTALADO")
         return False
 
 def main():
     print("=" * 60)
-    print("   VERIFICACIÓN DE DEPENDENCIAS - CONSORCIO DEJ")
+    print("    VERIFICACION DE DEPENDENCIAS")
+    print("    CONSORCIO DEJ - Software de Pavimentos")
     print("=" * 60)
     print()
     
-    # Verificar Python
-    print(f"🐍 Python {sys.version}")
-    print()
+    # Dependencias principales (requeridas)
+    print("📦 DEPENDENCIAS PRINCIPALES:")
+    print("-" * 40)
     
-    # Lista de módulos a verificar
-    modulos = [
-        ("streamlit", "Streamlit"),
-        ("pandas", "Pandas"),
-        ("numpy", "NumPy"),
-        ("matplotlib", "Matplotlib"),
-        ("plotly", "Plotly"),
-        ("reportlab", "ReportLab"),
-        ("openpyxl", "OpenPyXL"),
+    dependencias_principales = [
+        ("Streamlit", "streamlit"),
+        ("Pandas", "pandas"),
+        ("NumPy", "numpy"),
+        ("Matplotlib", "matplotlib"),
+        ("Plotly", "plotly"),
+        ("ReportLab", "reportlab"),
+        ("OpenPyXL", "openpyxl"),
+        ("SciPy", "scipy"),
     ]
     
-    print("📦 Verificando dependencias:")
-    print("-" * 40)
+    todas_principales = True
+    for nombre, import_name in dependencias_principales:
+        if not verificar_dependencia(nombre, import_name):
+            todas_principales = False
     
-    modulos_ok = 0
-    for modulo, nombre in modulos:
-        if verificar_modulo(modulo, nombre):
-            modulos_ok += 1
-    
-    print("-" * 40)
-    print(f"📊 Resultado: {modulos_ok}/{len(modulos)} módulos disponibles")
     print()
     
-    # Verificar archivos del proyecto
-    print("📁 Verificando archivos del proyecto:")
+    # Dependencias opcionales (LiDAR)
+    print("🚁 DEPENDENCIAS OPCIONALES (LiDAR):")
     print("-" * 40)
     
-    archivos_requeridos = [
-        "APP2.py",
-        "simple_payment_system.py",
-        "admin_config.py",
-        "admin_panel.py",
-        "requirements.txt",
-        ".streamlit/config.toml"
+    dependencias_opcionales = [
+        ("LasPy", "laspy"),
+        ("Open3D", "open3d"),
+        ("Rasterio", "rasterio"),
+        ("Google Earth Engine", "ee"),
+        ("GeoMap", "geemap"),
+        ("PyAutoCAD", "pyautocad"),
+        ("Scikit-learn", "sklearn"),
     ]
     
-    import os
-    archivos_ok = 0
-    for archivo in archivos_requeridos:
-        if os.path.exists(archivo):
-            print(f"✅ {archivo} - OK")
-            archivos_ok += 1
-        else:
-            print(f"❌ {archivo} - NO ENCONTRADO")
+    todas_opcionales = True
+    for nombre, import_name in dependencias_opcionales:
+        if not verificar_dependencia(nombre, import_name):
+            todas_opcionales = False
     
-    print("-" * 40)
-    print(f"📊 Resultado: {archivos_ok}/{len(archivos_requeridos)} archivos encontrados")
     print()
-    
-    # Resumen final
-    print("=" * 60)
-    print("   RESUMEN")
     print("=" * 60)
     
-    if modulos_ok == len(modulos) and archivos_ok == len(archivos_requeridos):
-        print("🎉 ¡Todo está listo! La aplicación debería funcionar correctamente.")
-        print()
-        print("🚀 Para ejecutar la aplicación:")
-        print("   streamlit run APP2.py")
-        print()
-        print("🔑 Credenciales de prueba:")
-        print("   admin / admin123 (Plan Empresarial)")
-        print("   demo / demo (Plan Gratuito)")
+    # Resumen
+    if todas_principales:
+        print("✅ TODAS LAS DEPENDENCIAS PRINCIPALES ESTÁN INSTALADAS")
+        print("   La aplicación básica funcionará correctamente")
     else:
-        print("⚠️ Hay algunos problemas que resolver:")
-        print()
-        if modulos_ok < len(modulos):
-            print("📦 Instalar dependencias faltantes:")
-            print("   pip install -r requirements.txt")
-            print()
-        if archivos_ok < len(archivos_requeridos):
-            print("📁 Verificar que todos los archivos del proyecto estén presentes")
-            print()
-        print("🔄 Después de resolver los problemas, ejecuta este script nuevamente.")
+        print("❌ FALTAN DEPENDENCIAS PRINCIPALES")
+        print("   Ejecuta: INSTALAR_DEPENDENCIAS.bat")
+        print("   O instala manualmente las dependencias faltantes")
+    
+    if todas_opcionales:
+        print("✅ TODAS LAS DEPENDENCIAS LIDAR ESTÁN INSTALADAS")
+        print("   La funcionalidad LiDAR estará disponible")
+    else:
+        print("⚠️  FALTAN DEPENDENCIAS LIDAR (OPCIONALES)")
+        print("   Para funcionalidad LiDAR completa, instala:")
+        print("   pip install laspy open3d rasterio earthengine-api geemap pyautocad scikit-learn")
+    
+    print()
+    print("🚀 PARA EJECUTAR LA APLICACIÓN:")
+    print("   streamlit run APP.py")
+    print()
+    print("=" * 60)
 
 if __name__ == "__main__":
     main() 

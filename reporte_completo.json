@@ -20,7 +20,7 @@
       8000
     ]
   },
-  "fecha_reporte": "2025-07-13 19:23:46",
+  "fecha_reporte": "2025-07-13 19:42:05",
   "resumen_ejecutivo": {
     "proyecto": "San Miguel - Cuadra 1",
     "ubicacion": "San Miguel, Puno, Perú",
@@ -49,55 +49,55 @@
       "Fecha_Procesamiento": "2024",
       "Datos_LiDAR": {
         "Área_ha": 100.0,
-        "Pendiente_%": 3.05,
+        "Pendiente_%": 3.89,
         "Zonas_inestables": {
-          "Pendiente_excesiva": 9907.0,
-          "Curvatura_alta": 9536.0,
-          "Zonas_hundimiento": 4775.0,
+          "Pendiente_excesiva": 9915.0,
+          "Curvatura_alta": 9511.0,
+          "Zonas_hundimiento": 4860.0,
           "Recomendación": "Realizar estudio geotécnico detallado en zonas críticas"
         },
-        "Puntos_procesados": 363160,
+        "Puntos_procesados": 361708,
         "Resolución_MDT": 1.0,
         "Archivo_GeoTIFF": "mdt_terreno.tif",
         "Estado": "✅ Procesamiento completado exitosamente"
       },
       "Curvas_Nivel": {
         "niveles": [
-          3859.214286367396,
-          3859.714286367396,
-          3860.214286367396,
-          3860.714286367396,
-          3861.214286367396,
-          3861.714286367396,
-          3862.214286367396,
-          3862.714286367396,
-          3863.214286367396,
-          3863.714286367396,
-          3864.214286367396,
-          3864.714286367396,
-          3865.214286367396,
-          3865.714286367396,
-          3866.214286367396,
-          3866.714286367396,
-          3867.214286367396,
-          3867.714286367396,
-          3868.214286367396,
-          3868.714286367396,
-          3869.214286367396,
-          3869.714286367396,
-          3870.214286367396,
-          3870.714286367396,
-          3871.214286367396
+          3859.043073253261,
+          3859.543073253261,
+          3860.043073253261,
+          3860.543073253261,
+          3861.043073253261,
+          3861.543073253261,
+          3862.043073253261,
+          3862.543073253261,
+          3863.043073253261,
+          3863.543073253261,
+          3864.043073253261,
+          3864.543073253261,
+          3865.043073253261,
+          3865.543073253261,
+          3866.043073253261,
+          3866.543073253261,
+          3867.043073253261,
+          3867.543073253261,
+          3868.043073253261,
+          3868.543073253261,
+          3869.043073253261,
+          3869.543073253261,
+          3870.043073253261,
+          3870.543073253261,
+          3871.043073253261
         ],
         "intervalo": 0.5,
         "total_curvas": 25,
-        "elevacion_min": 3859.21,
-        "elevacion_max": 3871.41
+        "elevacion_min": 3859.04,
+        "elevacion_max": 3871.19
       },
       "Analisis_Drenaje": {
-        "Pendiente_promedio_%": 133.06,
-        "Pendiente_minima_%": 0.38,
-        "Pendiente_maxima_%": 552.27,
+        "Pendiente_promedio_%": 132.05,
+        "Pendiente_minima_%": 2.04,
+        "Pendiente_maxima_%": 580.72,
         "Cumple_RAS_2020": "True",
         "Recomendacion_cunetas": "Pendiente adecuada para drenaje superficial"
       },
@@ -178,14 +178,14 @@
     "fecha_diseno": "2024",
     "datos_lidar": {
       "Área_ha": 100.0,
-      "Pendiente_%": 3.05,
+      "Pendiente_%": 3.89,
       "Zonas_inestables": {
-        "Pendiente_excesiva": 9907.0,
-        "Curvatura_alta": 9536.0,
-        "Zonas_hundimiento": 4775.0,
+        "Pendiente_excesiva": 9915.0,
+        "Curvatura_alta": 9511.0,
+        "Zonas_hundimiento": 4860.0,
         "Recomendación": "Realizar estudio geotécnico detallado en zonas críticas"
       },
-      "Puntos_procesados": 363160,
+      "Puntos_procesados": 361708,
       "Resolución_MDT": 1.0,
       "Archivo_GeoTIFF": "mdt_terreno.tif",
       "Estado": "✅ Procesamiento completado exitosamente"
@@ -193,7 +193,7 @@
     "drenaje_analisis": {
       "cumple_ras_2020": true,
       "recomendacion": "Pendiente adecuada para drenaje superficial",
-      "pendiente_actual": 3.05,
+      "pendiente_actual": 3.89,
       "tipo_cuneta": "Triangular estándar"
     },
     "recomendaciones": [
@@ -343,7 +343,7 @@
             7998.0
           ],
           "seccion": "Triangular",
-          "pendiente": 3.05
+          "pendiente": 3.89
         },
         {
           "tipo": "CUNETA_LATERAL",
@@ -357,7 +357,7 @@
             8008.0
           ],
           "seccion": "Triangular",
-          "pendiente": 3.05
+          "pendiente": 3.89
         }
       ],
       "anotaciones": [
@@ -419,11 +419,11 @@
         }
       ],
       "analisis_geotecnico": {
-        "pendiente_promedio": 3.05,
+        "pendiente_promedio": 3.89,
         "zonas_inestables": {
-          "Pendiente_excesiva": 9907.0,
-          "Curvatura_alta": 9536.0,
-          "Zonas_hundimiento": 4775.0,
+          "Pendiente_excesiva": 9915.0,
+          "Curvatura_alta": 9511.0,
+          "Zonas_hundimiento": 4860.0,
           "Recomendación": "Realizar estudio geotécnico detallado en zonas críticas"
         },
         "recomendaciones": [

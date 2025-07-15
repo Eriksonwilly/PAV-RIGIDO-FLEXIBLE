@@ -1736,23 +1736,23 @@ def generar_pdf_lidar_completo(datos_proyecto, resultados_lidar, datos_satelital
         elements.append(Spacer(1, 100))
         elements.append(Paragraph("<b>Normativas:</b> AASHTO 93, PCA, MTC, RNE", styleN))
         elements.append(PageBreak())
-# Validación automática de rangos y límites normativos (MTC-DG 2018, SUNASS)
-if cbr_estimado < 7.0:
-    st.error('¡Alerta! CBR bajo. Estabilizar suelo o mejorar subrasante. (MTC-DG 2018, mínimo 7%)')
-    st.stop()
-if 'espesor_rigido_mm' in locals() and espesor_rigido_mm > 300:
-    st.error('¡Espesor de losa no permitido! Máximo 300 mm según MTC-DG 2018.')
-    st.stop()
-if 'junta_maxima' in locals() and junta_maxima > 6.0:
-    st.error(f'¡Junta de {junta_maxima:.1f} m no permitida! Según MTC-DG 2018, máximo 6 m en climas fríos.')
-    st.stop()
-if 'caudal_diseno_lps' in locals() and caudal_diseno_lps < 1.0:
-    st.error(f'Caudal de diseño = {caudal_diseno_lps:.1f} L/s. Revisar parámetros hidrológicos (intensidad, coeficiente de escorrentía). SUNASS exige mínimo 1.0 L/s.')
-    st.stop()
-costo_rigido = espesor_rigido_mm * 150 if "espesor_rigido_mm" in locals() else 0
-if costo_rigido > 0 and (costo_rigido < 50 or costo_rigido > 150):
-    st.error(f'Costo de ${costo_rigido:,.0f}/m² fuera de rango referencial ($50–150/m²). Verificar espesores y materiales.')
-    st.stop()
+        # Validación automática de rangos y límites normativos (MTC-DG 2018, SUNASS)
+        if cbr_estimado < 7.0:
+            st.error('¡Alerta! CBR bajo. Estabilizar suelo o mejorar subrasante. (MTC-DG 2018, mínimo 7%)')
+            st.stop()
+        if 'espesor_rigido_mm' in locals() and espesor_rigido_mm > 300:
+            st.error('¡Espesor de losa no permitido! Máximo 300 mm según MTC-DG 2018.')
+            st.stop()
+        if 'junta_maxima' in locals() and junta_maxima > 6.0:
+            st.error(f'¡Junta de {junta_maxima:.1f} m no permitida! Según MTC-DG 2018, máximo 6 m en climas fríos.')
+            st.stop()
+        if 'caudal_diseno_lps' in locals() and caudal_diseno_lps < 1.0:
+            st.error(f'Caudal de diseño = {caudal_diseno_lps:.1f} L/s. Revisar parámetros hidrológicos (intensidad, coeficiente de escorrentía). SUNASS exige mínimo 1.0 L/s.')
+            st.stop()
+        costo_rigido = espesor_rigido_mm * 150 if "espesor_rigido_mm" in locals() else 0
+        if costo_rigido > 0 and (costo_rigido < 50 or costo_rigido > 150):
+            st.error(f'Costo de ${costo_rigido:,.0f}/m² fuera de rango referencial ($50–150/m²). Verificar espesores y materiales.')
+            st.stop()
 
 # --- MEMORIA DE CÁLCULO VISIBLE ---
 with st.expander('📝 Memoria de Cálculo y Normativa Aplicada'):

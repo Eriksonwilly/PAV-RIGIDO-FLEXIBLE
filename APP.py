@@ -3840,12 +3840,12 @@ with tabs[5]:
                 }
             
             # --- CÁLCULOS DE DISEÑO ---
-            if resultados_lidar and datos_satelitales:
-                # Calcular CBR basado en NDVI
-                cbr_estimado = calcular_cbr_ndvi(datos_satelitales['NDVI_promedio'])
+if resultados_lidar and datos_satelitales:
+    # Calcular CBR basado en NDVI
+    cbr_estimado = calcular_cbr_ndvi(datos_satelitales['NDVI_promedio'])
                 
                 # Calcular módulo de reacción K
-                k_modulo = 10 * cbr_estimado  # Fórmula MTC
+    k_modulo = 10 * cbr_estimado  # Fórmula MTC
                 
                 # Generar HEC-RAS para drenaje
                 hec_ras_content = generar_hec_ras_drenaje(

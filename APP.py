@@ -1736,40 +1736,7 @@ def generar_pdf_lidar_completo(datos_proyecto, resultados_lidar, datos_satelital
         elements.append(Spacer(1, 100))
         elements.append(Paragraph("<b>Normativas:</b> AASHTO 93, PCA, MTC, RNE", styleN))
         elements.append(PageBreak())
-        # Validación automática de rangos y límites normativos (MTC-DG 2018, SUNASS)
-        if cbr_estimado < 7.0:
-            st.error('¡Alerta! CBR bajo. Estabilizar suelo o mejorar subrasante. (MTC-DG 2018, mínimo 7%)')
-            st.stop()
-        if 'espesor_rigido_mm' in locals() and espesor_rigido_mm > 300:
-            st.error('¡Espesor de losa no permitido! Máximo 300 mm según MTC-DG 2018.')
-            st.stop()
-        if 'junta_maxima' in locals() and junta_maxima > 6.0:
-            st.error(f'¡Junta de {junta_maxima:.1f} m no permitida! Según MTC-DG 2018, máximo 6 m en climas fríos.')
-            st.stop()
-        if 'caudal_diseno_lps' in locals() and caudal_diseno_lps < 1.0:
-            st.error(f'Caudal de diseño = {caudal_diseno_lps:.1f} L/s. Revisar parámetros hidrológicos (intensidad, coeficiente de escorrentía). SUNASS exige mínimo 1.0 L/s.')
-            st.stop()
-        costo_rigido = espesor_rigido_mm * 150 if "espesor_rigido_mm" in locals() else 0
-        if costo_rigido > 0 and (costo_rigido < 50 or costo_rigido > 150):
-            st.error(f'Costo de ${costo_rigido:,.0f}/m² fuera de rango referencial ($50–150/m²). Verificar espesores y materiales.')
-            st.stop()
 
-# --- MEMORIA DE CÁLCULO VISIBLE ---
-with st.expander('📝 Memoria de Cálculo y Normativa Aplicada'):
-    st.markdown('''
-    **Normas y fórmulas aplicadas:**
-    - CBR mínimo: 7% (MTC-DG 2018)
-    - Espesor máximo de losa rígida: 300 mm (MTC-DG 2018)
-    - Junta máxima: 6 m (MTC-DG 2018, clima frío)
-    - Caudal mínimo de drenaje: 1.0 L/s (SUNASS)
-    - Costos referenciales: $50–150/m² (MTC-DG 2018, región Puno)
-    - Fórmulas:
-        - K = 10 × CBR (MTC)
-        - SN = a₁·D₁ + a₂·D₂·m₂ + a₃·D₃·m₃ (AASHTO 93)
-        - D = función iterativa AASHTO 93 (ver código)
-    - Referencias: MTC-DG 2018, SUNASS, PCA, AASHTO 93
-    - Justificación: El software bloquea automáticamente cualquier valor fuera de norma y muestra advertencias en rojo.
-    ''', unsafe_allow_html=True)
         # 1. Datos del Proyecto
         elements.append(Paragraph("1. DATOS DEL PROYECTO", styleH))
         datos_tabla = [
@@ -3873,12 +3840,12 @@ with tabs[5]:
                 }
             
             # --- CÁLCULOS DE DISEÑO ---
-if resultados_lidar and datos_satelitales:
-    # Calcular CBR basado en NDVI
-    cbr_estimado = calcular_cbr_ndvi(datos_satelitales['NDVI_promedio'])
+            if resultados_lidar and datos_satelitales:
+                # Calcular CBR basado en NDVI
+                cbr_estimado = calcular_cbr_ndvi(datos_satelitales['NDVI_promedio'])
                 
                 # Calcular módulo de reacción K
-    k_modulo = 10 * cbr_estimado  # Fórmula MTC
+                k_modulo = 10 * cbr_estimado  # Fórmula MTC
                 
                 # Generar HEC-RAS para drenaje
                 hec_ras_content = generar_hec_ras_drenaje(

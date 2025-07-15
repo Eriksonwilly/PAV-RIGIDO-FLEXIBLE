@@ -1056,7 +1056,7 @@ def show_login_page():
             if check_credentials(username, password):
                 st.session_state['logged_in'] = True
                 st.session_state['user'] = username
-                st.experimental_rerun()
+                st.rerun()
                 st.stop()  # <-- Esto es clave para cortar el flujo tras el rerun
             else:
                 st.error("Usuario o contraseña incorrectos.")
@@ -1085,7 +1085,7 @@ with st.container():
         if st.button("Cerrar Sesión", key="logout_btn"):
             st.session_state['logged_in'] = False
             st.session_state['user'] = None
-            st.experimental_rerun()
+            st.rerun()
 
 st.info("""
 Bienvenido al sistema profesional de diseño de pavimentos. Complete los datos del proyecto y presione **Calcular** para obtener resultados y recomendaciones según normativa peruana. 

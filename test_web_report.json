@@ -1,0 +1,28 @@
+{
+  "fecha_prueba": "2025-07-15 18:47:46",
+  "aplicacion": "APP.py - San Miguel Puno",
+  "puerto": 8501,
+  "urls": {
+    "local": "http://localhost:8501",
+    "network": "http://192.168.156.127:8501",
+    "external": "http://132.157.130.213:8501"
+  },
+  "botones_testeados": [
+    "🚀 Generar PDF LiDAR Completo",
+    "📁 Exportar HEC-RAS",
+    "🏗️ Exportar AutoCAD"
+  ],
+  "datos_implementados": {
+    "proyecto": "San Miguel Puno - Cuadra 1",
+    "ubicacion": "San Miguel, Puno, Perú",
+    "coordenadas": "-15.8422°S, -70.0199°W",
+    "elevacion": "3805 msnm",
+    "area": "0.08 ha (100m x 8m)",
+    "pendiente": "5.2% promedio"
+  },
+  "archivos_generados": [
+    "test_pdf_lidar_san_miguel.pdf",
+    "test_hec_ras_san_miguel.txt",
+    "test_autocad_san_miguel.txt"
+  ]
+}

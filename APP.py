@@ -1197,15 +1197,36 @@ def calcular_espesor_losa_rigido(W18, k, R, C, Sc, J, Ec, sistema_unidades):
         delta_PSI = 1.5  # Pérdida de servicio
         D = calcular_espesor_losa_AASHTO93(W18_lim, ZR, S0, delta_PSI, Sc, J, k, C)
         
+       
+       
+        # Convertir unidades según el sistema seleccionado
+        def calcular_espesor_losa_rigido(W18, k, R, C, Sc, J, Ec, sistema_unidades):
+        """
+    Calcula el espesor de losa de pavimento rígido según AASHTO 93
+    Parámetros corregidos para resultados realistas
+    """
+    try:
+        # Limitar W18 a valores realistas
+        W18_lim = min(W18, 1000000)  # Máximo 1 millón de ESALs
+        
+        # Usar la función AASHTO 93 corregida
+        ZR = -1.645  # Factor de confiabilidad estándar para 95%
+        S0 = 0.35   # Desviación estándar
+        delta_PSI = 1.5  # Pérdida de servicio
+        D = calcular_espesor_losa_AASHTO93(W18_lim, ZR, S0, delta_PSI, Sc, J, k, C)
+        
         # Convertir unidades según el sistema seleccionado
         if D is not None:
-        if sistema_unidades == "Sistema Internacional (SI)":
+            if sistema_unidades == "Sistema Internacional (SI)":
                 # Convertir de pulgadas a mm
                 D = D * 25.4
             # Si es sistema inglés, mantener en pulgadas
         else:
             D = 8.0  # Valor por defecto
         
+        return D
+    except Exception:
+        return 0
         return D
     except Exception:
         return 0

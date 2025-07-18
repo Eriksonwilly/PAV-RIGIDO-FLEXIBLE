@@ -4169,3 +4169,114 @@ if __name__ == "__main__" or True:  # Para pruebas o integración directa
     - Validación normativa automática
     - Planos constructivos en formato CAD
     """)
+
+# --- FUNCIONES DE CÁLCULO PARA LIDAR/DRONES ---
+def calcular_pavimento_rigido(datos_lidar):
+    try:
+        if not datos_lidar:
+            return None
+        pendiente_promedio = datos_lidar.get('pendiente_promedio', 2.0)
+        cbr_estimado = datos_lidar.get('cbr_estimado', 5.0)
+        k = 10 * cbr_estimado
+        espesor = 6 + (pendiente_promedio * 0.1)
+        return {
+            'k_estimado': k,
+            'espesor_recomendado': espesor,
+            'pendiente_terreno': pendiente_promedio,
+            'cbr_estimado': cbr_estimado,
+            'metodo': 'Estimación basada en datos LiDAR'
+        }
+    except Exception as e:
+        st.error(f"Error calculando pavimento rígido: {str(e)}")
+        return None
+
+def calcular_pavimento_flexible(datos_lidar):
+    try:
+        if not datos_lidar:
+            return None
+        cbr_estimado = datos_lidar.get('cbr_estimado', 5.0)
+        pendiente_promedio = datos_lidar.get('pendiente_promedio', 2.0)
+        sn = 3.0 + (cbr_estimado * 0.2) - (pendiente_promedio * 0.05)
+        return {
+            'sn_recomendado': sn,
+            'cbr_estimado': cbr_estimado,
+            'pendiente_terreno': pendiente_promedio,
+            'metodo': 'Estimación basada en datos LiDAR'
+        }
+    except Exception as e:
+        st.error(f"Error calculando pavimento flexible: {str(e)}")
+        return None
+
+def calcular_drenaje(datos_lidar):
+    try:
+        if not datos_lidar:
+            return None
+        area = datos_lidar.get('area_m2', 1000)
+        pendiente_promedio = datos_lidar.get('pendiente_promedio', 2.0)
+        caudal = (area * 0.001 * pendiente_promedio) / 3600
+        diametro_minimo = 0.15 + (caudal * 10)
+        return {
+            'caudal_estimado': caudal,
+            'diametro_minimo': diametro_minimo,
+            'pendiente_terreno': pendiente_promedio,
+            'area_drenaje': area,
+            'metodo': 'Estimación basada en datos LiDAR'
+        }
+    except Exception as e:
+        st.error(f"Error calculando drenaje: {str(e)}")
+        return None
+
+def calcular_veredas(datos_lidar):
+    try:
+        if not datos_lidar:
+            return None
+        pendiente_promedio = datos_lidar.get('pendiente_promedio', 2.0)
+        ancho_recomendado = 1.5
+        pendiente_maxima = min(12.0, pendiente_promedio * 2)
+        return {
+            'ancho_recomendado': ancho_recomendado,
+            'pendiente_maxima': pendiente_maxima,
+            'pendiente_terreno': pendiente_promedio,
+            'metodo': 'Estimación basada en datos LiDAR y RNE'
+        }
+    except Exception as e:
+        st.error(f"Error calculando veredas: {str(e)}")
+        return None
+
+# --- MODIFICAR LA SECCIÓN DE LIDAR/DRONES ---
+with tabs[5]:  # Pestaña LiDAR/Drones
+    st.header('🛸 Procesamiento LiDAR/Drone')
+    st.info('📋 Suba archivos LAS/LAZ para extraer información topográfica y generar análisis automáticos.')
+    uploaded_file = st.file_uploader("Subir archivo LAS/LAZ", type=['las', 'laz'])
+    if uploaded_file is not None:
+        with st.spinner('Procesando archivo LiDAR...'):
+            import tempfile
+            import os
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.las') as tmp:
+                tmp.write(uploaded_file.getvalue())
+                tmp_path = tmp.name
+            resultados_lidar = procesar_archivo_las_laz(tmp_path)
+            try:
+                os.unlink(tmp_path)
+            except:
+                pass
+            if resultados_lidar:
+                st.success('✅ Archivo LiDAR procesado exitosamente!')
+                st.subheader('📊 Resultados del Procesamiento LiDAR')
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Total de puntos", f"{resultados_lidar.get('total_points', 0):,}")
+                    st.metric("Área (m²)", f"{resultados_lidar.get('area_m2', 0):,.1f}")
+                with col2:
+                    st.metric("Pendiente promedio", f"{resultados_lidar.get('pendiente_promedio', 0):.1f}%")
+                    st.metric("Pendiente máxima", f"{resultados_lidar.get('pendiente_maxima', 0):.1f}%")
+                if 'ndvi_promedio' in resultados_lidar:
+                    resultados_lidar['cbr_estimado'] = calcular_cbr_ndvi(resultados_lidar['ndvi_promedio'])
+                    st.metric("CBR estimado (NDVI)", f"{resultados_lidar['cbr_estimado']:.1f}")
+                with st.expander("Ver todos los datos LiDAR"):
+                    st.json(resultados_lidar)
+                st.subheader('📈 Análisis Automático')
+                with st.spinner('Realizando análisis automáticos...'):
+                    resultado_rigido = calcular_pavimento_rigido(resultados_lidar)
+                    resultado_flexible = calcular_pavimento_flexible(resultados_lidar)
+                    resultado_drenaje = calcular_drenaje

@@ -3811,7 +3811,7 @@ with tabs[5]:
         for k in k_range:
             datos_tmp = dict(resultados_lidar)
             datos_tmp['cbr_estimado'] = k / 10  # Inversa de la correlación empírica k=10*CBR
-            res = calcular_pavimento_rigido_lidar(datos_tmp)
+            res = calcular_pavimento_rigido_lidar_simple(datos_tmp)
             D_range.append(res['espesor_recomendado'] if res else np.nan)
         fig, ax = plt.subplots()
         ax.plot(k_range, D_range, marker='o')
@@ -4380,115 +4380,203 @@ def main():
         st.info('Esta funcionalidad estará disponible en la próxima actualización.')
     
     with tabs[3]:
-        st.header('🛸 Procesamiento LiDAR/Drone')
-        st.info('📋 Suba archivos LAS/LAZ para extraer información topográfica y generar análisis automáticos.')
+        st.header('🛰️ Integración LiDAR/Drones')
+        st.info('📌 Suba archivos LAS/LAZ o ingrese coordenadas para análisis satelital')
+        
+        with st.expander("📤 Subir archivos LiDAR"):
+            uploaded_file = st.file_uploader("Seleccione archivo LAS/LAZ", type=['las', 'laz'])
+            
+            if uploaded_file:
+                with st.spinner('Procesando datos LiDAR...'):
+                    try:
+                        # Guardar archivo temporalmente
+                        import tempfile
+                        import os
+                        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+                            tmp.write(uploaded_file.getvalue())
+                            tmp_path = tmp.name
+                        
+                        # Procesar archivo
+                        resultados_lidar = procesar_archivo_las_laz(tmp_path)
+                        
+                        if resultados_lidar:
+                            st.success("¡Procesamiento LiDAR completado!")
+                            
+                            # Mostrar resultados básicos
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                st.metric("Puntos totales", f"{resultados_lidar.get('total_points', 0):,}")
+                                st.metric("Área (m²)", f"{resultados_lidar.get('area_m2', 0):,.1f}")
+                            with col2:
+                                st.metric("Puntos de suelo", f"{resultados_lidar.get('ground_points', 0):,}")
+                                st.metric("Pendiente promedio", f"{resultados_lidar.get('pendiente_promedio', 0):.1f}%")
+                            
+                            # Integrar con cálculo de pavimento
+                            if st.button("🔄 Integrar con diseño de pavimento"):
+                                datos_integracion = {
+                                    'W18': 1000000,  # Valor por defecto, debería venir de análisis
+                                    'k': resultados_lidar.get('k_recomendado', 50),  # Valor sugerido
+                                    'Proyecto': 'Integración LiDAR',
+                                    'sistema_unidades': sistema_unidades
+                                }
+                                
+                                resultados_integrado = calcular_pavimento_rigido_lidar(datos_integracion)
+                                
+                                if resultados_integrado:
+                                    st.subheader("Resultados Integrados LiDAR + Pavimento")
+                                    st.json(resultados_integrado)
+                                    
+                                    # Generar PDF integrado
+                                    if st.button("📄 Generar Reporte LiDAR+Pavimento"):
+                                        pdf_buffer = generar_pdf_lidar_completo(
+                                            datos_integracion,
+                                            resultados_lidar,
+                                            None,  # Podrías añadir datos satelitales aquí
+                                            None   # Y contenido HEC-RAS si aplica
+                                        )
+                                        
+                                        if pdf_buffer:
+                                            st.download_button(
+                                                label="📥 Descargar Reporte Completo",
+                                                data=pdf_buffer.getvalue(),
+                                                file_name="reporte_lidar_pavimento.pdf",
+                                                mime="application/pdf"
+                                            )
+                        
+                    except Exception as e:
+                        st.error(f"Error procesando LiDAR: {str(e)}")
+                    finally:
+                        # Limpiar archivo temporal
+                        if 'tmp_path' in locals():
+                            try:
+                                os.unlink(tmp_path)
+                            except:
+                                pass
+        
+        with st.expander("🌍 Análisis Satelital (Google Earth Engine)"):
+            if not GEE_AVAILABLE:
+                st.warning("Google Earth Engine no está disponible. Instale las dependencias necesarias.")
+            else:
+                col1, col2 = st.columns(2)
+                with col1:
+                    lat = st.number_input("Latitud", min_value=-90.0, max_value=90.0, value=-16.405, step=0.001)
+                    lon = st.number_input("Longitud", min_value=-180.0, max_value=180.0, value=-71.535, step=0.001)
+                with col2:
+                    fecha_inicio = st.date_input("Fecha inicio", value=pd.to_datetime("2023-01-01"))
+                    fecha_fin = st.date_input("Fecha fin", value=pd.to_datetime("2023-12-31"))
+                
+                if st.button("🛰️ Obtener datos satelitales"):
+                    with st.spinner("Consultando Google Earth Engine..."):
+                        try:
+                            datos_satelitales = extraer_datos_satelitales_gee(
+                                [lon, lat],
+                                fecha_inicio.strftime("%Y-%m-%d"),
+                                fecha_fin.strftime("%Y-%m-%d")
+                            )
+                            
+                            if datos_satelitales:
+                                st.success("Datos satelitales obtenidos!")
+                                st.json(datos_satelitales)
+                                
+                                # Calcular CBR estimado del NDVI
+                                cbr_estimado = calcular_cbr_ndvi(datos_satelitales.get('NDVI_promedio', 0.3))
+                                st.metric("CBR estimado del suelo", f"{cbr_estimado:.1f}%")
+                        except Exception as e:
+                            st.error(f"Error obteniendo datos satelitales: {str(e)}")
         
         # Datos de ejemplo para San Miguel, Puno
-        example_datos_proyecto = {
-            'Nombre': 'San Miguel, Puno - Cuadra 1',
-            'Ubicacion': 'Jr. Vilcanota, San Miguel, Puno',
-            'Altitud': 3825,
-            'Clima': 'Frío andino',
-            'Tipo_via': 'Urbana secundaria'
-        }
-        
-        example_parametros_lidar = {
-            'total_points': 850000,
-            'area_m2': 1000.0,
-            'ancho_via': 10.0,
-            'longitud_via': 100.0,
-            'pendiente_promedio': 5.2,
-            'pendiente_maxima': 12.0,
-            'cbr_estimado': 6.5,
-            'ndvi_promedio': 0.45,
-            'densidad_puntos': 85.0,
-            'precision_planimetrica': 0.04,
-            'precision_altimetrica': 0.05
-        }
-        
-        uploaded_file = st.file_uploader("Subir archivo LAS/LAZ", type=['las', 'laz'])
-        
-        # Opción para usar datos de ejemplo
-        use_example_data = st.checkbox("Usar datos de ejemplo (San Miguel, Puno)", value=True)
-        
-        if use_example_data:
-            resultados_lidar = example_parametros_lidar
-            st.success('✅ Usando datos de ejemplo de San Miguel, Puno')
-        elif uploaded_file is not None:
-            with st.spinner('Procesando archivo LiDAR...'):
-                import tempfile
-                import os
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.las') as tmp:
-                    tmp.write(uploaded_file.getvalue())
-                    tmp_path = tmp.name
-                resultados_lidar = procesar_archivo_las_laz(tmp_path)
-                try:
-                    os.unlink(tmp_path)
-                except:
-                    pass
-        else:
-            resultados_lidar = None
-        
-        if resultados_lidar:
-            st.subheader('📊 Resultados del Procesamiento LiDAR')
-            col1, col2 = st.columns(2)
-            with col1:
-                st.metric("Total de puntos", f"{resultados_lidar.get('total_points', 0):,}")
-                st.metric("Área (m²)", f"{resultados_lidar.get('area_m2', 0):,.1f}")
-            with col2:
-                st.metric("Pendiente promedio", f"{resultados_lidar.get('pendiente_promedio', 0):.1f}%")
-                st.metric("Pendiente máxima", f"{resultados_lidar.get('pendiente_maxima', 0):.1f}%")
+        with st.expander("📊 Datos de Ejemplo - San Miguel, Puno"):
+            example_datos_proyecto = {
+                'Nombre': 'San Miguel, Puno - Cuadra 1',
+                'Ubicacion': 'Jr. Vilcanota, San Miguel, Puno',
+                'Altitud': 3825,
+                'Clima': 'Frío andino',
+                'Tipo_via': 'Urbana secundaria'
+            }
             
-            if 'ndvi_promedio' in resultados_lidar:
-                resultados_lidar['cbr_estimado'] = calcular_cbr_ndvi(resultados_lidar['ndvi_promedio'])
-                st.metric("CBR estimado (NDVI)", f"{resultados_lidar['cbr_estimado']:.1f}")
+            example_parametros_lidar = {
+                'total_points': 850000,
+                'area_m2': 1000.0,
+                'ancho_via': 10.0,
+                'longitud_via': 100.0,
+                'pendiente_promedio': 5.2,
+                'pendiente_maxima': 12.0,
+                'cbr_estimado': 6.5,
+                'ndvi_promedio': 0.45,
+                'densidad_puntos': 85.0,
+                'precision_planimetrica': 0.04,
+                'precision_altimetrica': 0.05
+            }
             
-            with st.expander("Ver todos los datos LiDAR"):
-                st.json(resultados_lidar)
+            st.json(example_parametros_lidar)
             
-            st.subheader('📈 Análisis Automático')
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                if st.button('Pavimento Rígido', key='btn_rigido_lidar'):
-                    resultado_rigido = calcular_pavimento_rigido_lidar(resultados_lidar)
-                    st.write('**Resultado Pavimento Rígido:**')
-                    st.json(resultado_rigido)
-            with col2:
-                if st.button('Pavimento Flexible', key='btn_flexible_lidar'):
-                    resultado_flexible = calcular_pavimento_flexible(resultados_lidar)
-                    st.write('**Resultado Pavimento Flexible:**')
-                    st.json(resultado_flexible)
-            with col3:
-                if st.button('Cunetas/Drenaje', key='btn_drenaje_lidar'):
-                    resultado_drenaje = calcular_drenaje(resultados_lidar)
-                    st.write('**Resultado Drenaje:**')
-                    st.json(resultado_drenaje)
-            with col4:
-                if st.button('Veredas', key='btn_veredas_lidar'):
-                    resultado_veredas = calcular_veredas(resultados_lidar)
-                    st.write('**Resultado Veredas:**')
-                    st.json(resultado_veredas)
-            
-            # Análisis de sensibilidad
-            st.subheader('📈 Análisis de Sensibilidad (Pavimento Rígido)')
-            if 'matplotlib' in globals() and MATPLOTLIB_AVAILABLE:
-                import matplotlib.pyplot as plt
-                import numpy as np
-                k_range = np.linspace(10, 100, 30)
-                D_range = []
-                for k in k_range:
-                    datos_tmp = dict(resultados_lidar)
-                    datos_tmp['cbr_estimado'] = k / 10  # Inversa de la correlación empírica k=10*CBR
-                    res = calcular_pavimento_rigido(datos_tmp)
-                    D_range.append(res['espesor_recomendado'] if res else np.nan)
-                fig, ax = plt.subplots()
-                ax.plot(k_range, D_range, marker='o')
-                ax.set_xlabel('Módulo de reacción k (MPa/m)')
-                ax.set_ylabel('Espesor recomendado (pulg)')
-                ax.set_title('Sensibilidad de espesor respecto a k (San Miguel, Puno)')
-                st.pyplot(fig)
-            else:
-                st.info('Matplotlib no está disponible para gráficos.')
+            if st.button("🚀 Usar datos de ejemplo para análisis"):
+                resultados_lidar = example_parametros_lidar
+                st.success('✅ Usando datos de ejemplo de San Miguel, Puno')
+                
+                # Mostrar resultados básicos
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Total de puntos", f"{resultados_lidar.get('total_points', 0):,}")
+                    st.metric("Área (m²)", f"{resultados_lidar.get('area_m2', 0):,.1f}")
+                with col2:
+                    st.metric("Pendiente promedio", f"{resultados_lidar.get('pendiente_promedio', 0):.1f}%")
+                    st.metric("Pendiente máxima", f"{resultados_lidar.get('pendiente_maxima', 0):.1f}%")
+                
+                if 'ndvi_promedio' in resultados_lidar:
+                    resultados_lidar['cbr_estimado'] = calcular_cbr_ndvi(resultados_lidar['ndvi_promedio'])
+                    st.metric("CBR estimado (NDVI)", f"{resultados_lidar['cbr_estimado']:.1f}")
+                
+                # Análisis automático con botones
+                st.subheader('📈 Análisis Automático')
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    if st.button('Pavimento Rígido', key='btn_rigido_lidar'):
+                        datos_integracion = {
+                            'W18': 1000000,
+                            'k': resultados_lidar.get('cbr_estimado', 6.5) * 10,
+                            'Proyecto': 'San Miguel, Puno',
+                            'sistema_unidades': sistema_unidades
+                        }
+                        resultado_rigido = calcular_pavimento_rigido_lidar(datos_integracion)
+                        st.write('**Resultado Pavimento Rígido:**')
+                        st.json(resultado_rigido)
+                with col2:
+                    if st.button('Pavimento Flexible', key='btn_flexible_lidar'):
+                        resultado_flexible = calcular_pavimento_flexible(resultados_lidar)
+                        st.write('**Resultado Pavimento Flexible:**')
+                        st.json(resultado_flexible)
+                with col3:
+                    if st.button('Cunetas/Drenaje', key='btn_drenaje_lidar'):
+                        resultado_drenaje = calcular_drenaje(resultados_lidar)
+                        st.write('**Resultado Drenaje:**')
+                        st.json(resultado_drenaje)
+                with col4:
+                    if st.button('Veredas', key='btn_veredas_lidar'):
+                        resultado_veredas = calcular_veredas(resultados_lidar)
+                        st.write('**Resultado Veredas:**')
+                        st.json(resultado_veredas)
+                
+                # Análisis de sensibilidad
+                st.subheader('📈 Análisis de Sensibilidad (Pavimento Rígido)')
+                if 'matplotlib' in globals() and MATPLOTLIB_AVAILABLE:
+                    import matplotlib.pyplot as plt
+                    import numpy as np
+                    k_range = np.linspace(10, 100, 30)
+                    D_range = []
+                    for k in k_range:
+                        datos_tmp = dict(resultados_lidar)
+                        datos_tmp['cbr_estimado'] = k / 10  # Inversa de la correlación empírica k=10*CBR
+                        res = calcular_pavimento_rigido_lidar_simple(datos_tmp)
+                        D_range.append(res['espesor_recomendado'] if res else np.nan)
+                    fig, ax = plt.subplots()
+                    ax.plot(k_range, D_range, marker='o')
+                    ax.set_xlabel('Módulo de reacción k (MPa/m)')
+                    ax.set_ylabel('Espesor recomendado (pulg)')
+                    ax.set_title('Sensibilidad de espesor respecto a k (San Miguel, Puno)')
+                    st.pyplot(fig)
+                else:
+                    st.info('Matplotlib no está disponible para gráficos.')
     
     with tabs[4]:
         st.header('📄 Generación de Reportes PDF')
@@ -4985,7 +5073,81 @@ def mostrar_interfaz_pavimento_rigido_mejorado():
                 mostrar_resultados_pavimento_rigido_mejorado(resultados, datos_calculo)
 
 # --- FUNCIONES DE CÁLCULO PARA LIDAR/DRONES ---
-def calcular_pavimento_rigido_lidar(datos_lidar):
+# --- FUNCIÓN PARA INTEGRAR DATOS LIDAR CON CÁLCULO DE PAVIMENTO ---
+def calcular_pavimento_rigido_lidar(datos_proyecto):
+    """
+    Calcula el diseño de pavimento rígido integrando datos LiDAR/Drone
+    """
+    try:
+        # Verificar datos mínimos requeridos
+        if not datos_proyecto or 'W18' not in datos_proyecto or 'k' not in datos_proyecto:
+            raise ValueError("Datos insuficientes para el cálculo")
+        
+        # Parámetros por defecto si no están en datos_proyecto
+        R = datos_proyecto.get('R', 0.95)
+        C = datos_proyecto.get('C', 1.0)
+        Sc = datos_proyecto.get('Sc', 4.5)  # MPa
+        J = datos_proyecto.get('J', 3.2)
+        Ec = datos_proyecto.get('Ec', 30000)  # MPa
+        sistema_unidades = datos_proyecto.get('sistema_unidades', 'SI (Internacional)')
+        
+        # Convertir unidades si es necesario
+        if sistema_unidades == "SI (Internacional)":
+            Sc_calc = Sc * 145.038  # MPa a psi
+            k_calc = datos_proyecto['k'] * 3.6839  # MPa/m a pci
+            Ec_calc = Ec * 145.038  # MPa a psi
+        else:
+            Sc_calc = Sc  # psi
+            k_calc = datos_proyecto['k']  # pci
+            Ec_calc = Ec  # psi
+        
+        # Calcular espesor de losa
+        D_pulg = calcular_espesor_losa_AASHTO93(
+            datos_proyecto['W18'], 
+            datos_proyecto.get('ZR', -1.645),
+            datos_proyecto.get('S0', 0.35),
+            datos_proyecto.get('delta_PSI', 1.5),
+            Sc_calc, J, k_calc, C
+        )
+        
+        if sistema_unidades == "SI (Internacional)":
+            D = D_pulg * 25.4  # mm
+            unidad_espesor = "mm"
+        else:
+            D = D_pulg
+            unidad_espesor = "pulg"
+        
+        # Calcular juntas y refuerzo
+        L_junta = calcular_junta_L(D, Sc, sistema_unidades)
+        As_temp = calcular_As_temp(D, L_junta, datos_proyecto.get('acero_fy', 280), sistema_unidades)
+        
+        # Calcular fatiga y erosión
+        reps = datos_proyecto['W18']
+        porcentaje_fatiga = calcular_fatiga_corregida(reps, D, Sc, datos_proyecto.get('periodo', 20))
+        porcentaje_erosion = calcular_erosion_corregida(reps, D, datos_proyecto['k'], datos_proyecto.get('periodo', 20))
+        
+        # Resultados organizados
+        resultados = {
+            'Espesor_losa': D,
+            'Unidad_espesor': unidad_espesor,
+            'Junta_maxima': L_junta,
+            'Area_acero_temp': As_temp,
+            'Porcentaje_fatiga': porcentaje_fatiga,
+            'Porcentaje_erosion': porcentaje_erosion,
+            'Parametros_entrada': datos_proyecto,
+            'Metodologia': 'AASHTO 93 integrado con LiDAR'
+        }
+        
+        return resultados
+        
+    except Exception as e:
+        st.error(f"Error en cálculo LiDAR: {str(e)}")
+        return None
+
+def calcular_pavimento_rigido_lidar_simple(datos_lidar):
+    """
+    Función simple para cálculos básicos de LiDAR (mantiene compatibilidad)
+    """
     try:
         if not datos_lidar:
             return None

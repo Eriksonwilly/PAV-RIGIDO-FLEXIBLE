@@ -3724,14 +3724,17 @@ with tabs[5]:
             total_points = st.number_input('Puntos totales', value=850000, min_value=1000)
             area_m2 = st.number_input('Área (m²)', value=1000.0, min_value=10.0)
             densidad_puntos = st.number_input('Densidad de puntos (pts/m²)', value=85.0, min_value=1.0)
+            ancho_via = st.number_input('Ancho de vía (m)', value=10.0, min_value=1.0, step=0.1)
         with col2:
             pendiente_maxima = st.number_input('Pendiente máxima (%)', value=7.2, min_value=0.0)
             pendiente_promedio = st.number_input('Pendiente promedio (%)', value=5.2, min_value=0.0)
             z_min = st.number_input('Elevación mínima (msnm)', value=3820.0)
+            ancho_vereda = st.number_input('Ancho de vereda (m)', value=1.2, min_value=0.5, step=0.1)
         with col3:
             z_max = st.number_input('Elevación máxima (msnm)', value=3830.0)
             fecha_levantamiento = st.text_input('Fecha de levantamiento', value='2024-06-15')
             equipo = st.text_input('Equipo', value='DJI Matrice 350 RTK + Hesai XT32')
+            distancia_cuadra = st.number_input('Distancia de la cuadra (m)', value=100.0, min_value=10.0, step=1.0)
         submitted = st.form_submit_button('Actualizar datos de ejemplo')
 
     resultados_lidar = {
@@ -3744,7 +3747,10 @@ with tabs[5]:
         "z_max": z_max,
         "densidad_puntos": densidad_puntos,
         "fecha_levantamiento": fecha_levantamiento,
-        "equipo": equipo
+        "equipo": equipo,
+        "ancho_via": ancho_via,
+        "ancho_vereda": ancho_vereda,
+        "distancia_cuadra": distancia_cuadra
     }
 
     st.success('Datos de ejemplo listos para análisis.')

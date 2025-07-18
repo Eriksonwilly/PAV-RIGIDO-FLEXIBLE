@@ -1197,8 +1197,6 @@ def calcular_espesor_losa_rigido(W18, k, R, C, Sc, J, Ec, sistema_unidades):
         delta_PSI = 1.5  # Pérdida de servicio
         D = calcular_espesor_losa_AASHTO93(W18_lim, ZR, S0, delta_PSI, Sc, J, k, C)
         
-       
-       
         # Convertir unidades según el sistema seleccionado
         def calcular_espesor_losa_rigido(W18, k, R, C, Sc, J, Ec, sistema_unidades):
         """

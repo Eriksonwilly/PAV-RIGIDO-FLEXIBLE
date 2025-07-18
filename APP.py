@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from io import BytesIO
 import base64
+import math
 
 # --- GESTIÓN ROBUSTA DE DEPENDENCIAS Y GRÁFICOS ---
 # Inspirado en APP1.py, pero manteniendo la estructura de APP.py
@@ -4032,15 +4033,183 @@ def calcular_veredas(datos):
 # Ejemplo de uso para la sección LIDAR/Dron
 resultado_veredas = calcular_veredas(example_datos_proyecto)
 
+# --- FUNCIÓN PRINCIPAL MEJORADA ---
+def main():
+    """Función principal de la aplicación"""
+    # Configuración de página
+    st.set_page_config(
+        page_title="CONSORCIO DEJ - Pavimento Rígido/Flexible",
+        page_icon="🛣️",
+        layout="wide"
+    )
+    
+    # Barra superior con logo y título
+    with st.container():
+        col_logo, col_title, col_user = st.columns([0.1, 0.7, 0.2])
+        with col_logo:
+            st.markdown("<div style='text-align:center;'><span style='font-size:38px;'>🛣️</span></div>", 
+                       unsafe_allow_html=True)
+        with col_title:
+            st.markdown("<div style='text-align:center;'><h2 style='color:#2F2F2F;margin-bottom:0;'>CONSORCIO DEJ</h2><span style='font-size:16px;color:#555;'>Diseño de Pavimentos Rígido y Flexible</span></div>", 
+                       unsafe_allow_html=True)
+        with col_user:
+            st.markdown("<div style='text-align:right;'><b>Usuario:</b> <span style='color:#1976D2'>Demo</span></div>", 
+                       unsafe_allow_html=True)
+    
+    st.info("""
+    Bienvenido al sistema profesional de diseño de pavimentos. Complete los datos del proyecto y presione **Calcular** para obtener resultados y recomendaciones según normativa peruana. 
+    > **Tip:** Puede editar la tabla de tránsito y cambiar unidades en la parte inferior derecha.
+    """)
+    
+    # Sistema de unidades
+    sistema_unidades = st.radio(
+        "Sistema de unidades:",
+        ["SI (Internacional)", "Inglés"],
+        horizontal=True,
+        key="sistema_unidades_selector"
+    )
+    
+    # Pestañas principales
+    tabs = st.tabs([
+        'Pavimento Rígido',
+        'Pavimento Flexible',
+        'Veredas y Cunetas',
+        'LiDAR/Drone',
+        'Reportes PDF'
+    ])
+    
+    with tabs[0]:
+        mostrar_interfaz_pavimento_rigido_mejorado()
+    
+    with tabs[1]:
+        st.header('🛣️ Pavimento Flexible')
+        st.info('Esta funcionalidad estará disponible en la próxima actualización.')
+    
+    with tabs[2]:
+        st.header('🛣️ Veredas y Cunetas')
+        st.info('Esta funcionalidad estará disponible en la próxima actualización.')
+    
+    with tabs[3]:
+        st.header('🛸 Procesamiento LiDAR/Drone')
+        st.info('📋 Suba archivos LAS/LAZ para extraer información topográfica y generar análisis automáticos.')
+        
+        # Datos de ejemplo para San Miguel, Puno
+        example_datos_proyecto = {
+            'Nombre': 'San Miguel, Puno - Cuadra 1',
+            'Ubicacion': 'Jr. Vilcanota, San Miguel, Puno',
+            'Altitud': 3825,
+            'Clima': 'Frío andino',
+            'Tipo_via': 'Urbana secundaria'
+        }
+        
+        example_parametros_lidar = {
+            'total_points': 850000,
+            'area_m2': 1000.0,
+            'ancho_via': 10.0,
+            'longitud_via': 100.0,
+            'pendiente_promedio': 5.2,
+            'pendiente_maxima': 12.0,
+            'cbr_estimado': 6.5,
+            'ndvi_promedio': 0.45,
+            'densidad_puntos': 85.0,
+            'precision_planimetrica': 0.04,
+            'precision_altimetrica': 0.05
+        }
+        
+        uploaded_file = st.file_uploader("Subir archivo LAS/LAZ", type=['las', 'laz'])
+        
+        # Opción para usar datos de ejemplo
+        use_example_data = st.checkbox("Usar datos de ejemplo (San Miguel, Puno)", value=True)
+        
+        if use_example_data:
+            resultados_lidar = example_parametros_lidar
+            st.success('✅ Usando datos de ejemplo de San Miguel, Puno')
+        elif uploaded_file is not None:
+            with st.spinner('Procesando archivo LiDAR...'):
+                import tempfile
+                import os
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.las') as tmp:
+                    tmp.write(uploaded_file.getvalue())
+                    tmp_path = tmp.name
+                resultados_lidar = procesar_archivo_las_laz(tmp_path)
+                try:
+                    os.unlink(tmp_path)
+                except:
+                    pass
+        else:
+            resultados_lidar = None
+        
+        if resultados_lidar:
+            st.subheader('📊 Resultados del Procesamiento LiDAR')
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Total de puntos", f"{resultados_lidar.get('total_points', 0):,}")
+                st.metric("Área (m²)", f"{resultados_lidar.get('area_m2', 0):,.1f}")
+            with col2:
+                st.metric("Pendiente promedio", f"{resultados_lidar.get('pendiente_promedio', 0):.1f}%")
+                st.metric("Pendiente máxima", f"{resultados_lidar.get('pendiente_maxima', 0):.1f}%")
+            
+            if 'ndvi_promedio' in resultados_lidar:
+                resultados_lidar['cbr_estimado'] = calcular_cbr_ndvi(resultados_lidar['ndvi_promedio'])
+                st.metric("CBR estimado (NDVI)", f"{resultados_lidar['cbr_estimado']:.1f}")
+            
+            with st.expander("Ver todos los datos LiDAR"):
+                st.json(resultados_lidar)
+            
+            st.subheader('📈 Análisis Automático')
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                if st.button('Pavimento Rígido', key='btn_rigido_lidar'):
+                    resultado_rigido = calcular_pavimento_rigido(resultados_lidar)
+                    st.write('**Resultado Pavimento Rígido:**')
+                    st.json(resultado_rigido)
+            with col2:
+                if st.button('Pavimento Flexible', key='btn_flexible_lidar'):
+                    resultado_flexible = calcular_pavimento_flexible(resultados_lidar)
+                    st.write('**Resultado Pavimento Flexible:**')
+                    st.json(resultado_flexible)
+            with col3:
+                if st.button('Cunetas/Drenaje', key='btn_drenaje_lidar'):
+                    resultado_drenaje = calcular_drenaje(resultados_lidar)
+                    st.write('**Resultado Drenaje:**')
+                    st.json(resultado_drenaje)
+            with col4:
+                if st.button('Veredas', key='btn_veredas_lidar'):
+                    resultado_veredas = calcular_veredas(resultados_lidar)
+                    st.write('**Resultado Veredas:**')
+                    st.json(resultado_veredas)
+            
+            # Análisis de sensibilidad
+            st.subheader('📈 Análisis de Sensibilidad (Pavimento Rígido)')
+            if 'matplotlib' in globals() and MATPLOTLIB_AVAILABLE:
+                import matplotlib.pyplot as plt
+                import numpy as np
+                k_range = np.linspace(10, 100, 30)
+                D_range = []
+                for k in k_range:
+                    datos_tmp = dict(resultados_lidar)
+                    datos_tmp['cbr_estimado'] = k / 10  # Inversa de la correlación empírica k=10*CBR
+                    res = calcular_pavimento_rigido(datos_tmp)
+                    D_range.append(res['espesor_recomendado'] if res else np.nan)
+                fig, ax = plt.subplots()
+                ax.plot(k_range, D_range, marker='o')
+                ax.set_xlabel('Módulo de reacción k (MPa/m)')
+                ax.set_ylabel('Espesor recomendado (pulg)')
+                ax.set_title('Sensibilidad de espesor respecto a k (San Miguel, Puno)')
+                st.pyplot(fig)
+            else:
+                st.info('Matplotlib no está disponible para gráficos.')
+    
+    with tabs[4]:
+        st.header('📄 Generación de Reportes PDF')
+        st.info('Genere reportes profesionales en formato PDF con todos los análisis y resultados.')
+        
+        if st.button('📄 Generar Reporte Completo', key='btn_reporte_completo'):
+            st.info('Función de generación de PDF disponible en versión premium.')
+
 # --- DEMOSTRACIÓN INTEGRAL LIDAR/DRON (EJEMPLO STREAMLIT) ---
 if __name__ == "__main__" or True:  # Para pruebas o integración directa
-    import streamlit as st
-
-    datos_proyecto = example_datos_proyecto
-    parametros_lidar = example_parametros_lidar
-
-    st.title("Diseño Integral - CUADRA 1 JR VILCANOTA (San Miguel, Puno)")
-    st.image("lidar_mapa.jpg", caption="Modelo LiDAR de la cuadra - Resolución 4cm")
+    main()
 
     col1, col2 = st.columns(2)
     with col1:
@@ -4174,6 +4343,356 @@ if __name__ == "__main__" or True:  # Para pruebas o integración directa
     - Validación normativa automática
     - Planos constructivos en formato CAD
     """)
+
+# --- FUNCIONES DE CÁLCULO MEJORADAS PARA PAVIMENTO RÍGIDO ---
+def calcular_pavimento_rigido_mejorado(datos):
+    """
+    Calcula los parámetros de diseño para pavimento rígido según AASHTO 93
+    Args:
+        datos: Diccionario con todos los parámetros de entrada
+    Returns:
+        Diccionario con los resultados del cálculo
+    """
+    try:
+        # Extraer parámetros del diccionario de datos
+        sistema_unidades = datos.get('sistema_unidades', 'SI (Internacional)')
+        W18 = datos.get('W18', 100000)
+        k_val = datos.get('k_val', 50)
+        cbr = datos.get('cbr', 3)
+        subrasante_tipo = datos.get('subrasante_tipo', 'Correlación con CBR')
+        modulo_rotura = datos.get('modulo_rotura', 4.5)
+        ZR = datos.get('ZR', -1.645)
+        S0 = datos.get('S0', 0.35)
+        delta_PSI = datos.get('delta_PSI', 1.5)
+        J = datos.get('J', 3.2)
+        C = datos.get('C', 1.0)
+        Ec = datos.get('Ec', 300000)
+        periodo = datos.get('periodo', 20)
+        espesor_losa = datos.get('espesor_losa', 500)
+        acero_fy = datos.get('acero_fy', 280)
+        
+        # Determinar k según el tipo de entrada
+        if subrasante_tipo == "Ingreso directo":
+            k_analisis = k_val
+        else:
+            k_analisis = 10 * cbr  # Correlación típica CBR vs k
+            
+        # Convertir unidades para cálculos internos (siempre usar sistema inglés para fórmulas)
+        if sistema_unidades == "SI (Internacional)":
+            Sc_calc = modulo_rotura * 145.038  # MPa a psi
+            k_calc = k_analisis * 3.6839  # MPa/m a pci
+            Ec_calc = Ec * 145.038  # MPa a psi
+        else:
+            Sc_calc = modulo_rotura
+            k_calc = k_analisis
+            Ec_calc = Ec
+        
+        # Calcular espesor de losa (AASHTO 93)
+        D_pulg = calcular_espesor_losa_AASHTO93(W18, ZR, S0, delta_PSI, Sc_calc, J, k_calc, C)
+        
+        # Verificar que el cálculo fue exitoso
+        if D_pulg is None:
+            st.error("Error en el cálculo del espesor de losa. Verifique los parámetros de entrada.")
+            return None
+        
+        # Convertir unidades de salida
+        if sistema_unidades == "SI (Internacional)":
+            D = D_pulg * 25.4  # pulg a mm
+            unidad_espesor = UNIDADES_SI['espesor']
+            unidad_longitud = UNIDADES_SI['longitud']
+            unidad_area = UNIDADES_SI['area']
+            unidad_modulo = UNIDADES_SI['modulo_rotura']
+            unidad_k = UNIDADES_SI['k']
+        else:
+            D = D_pulg
+            unidad_espesor = UNIDADES_INGLES['espesor']
+            unidad_longitud = UNIDADES_INGLES['longitud']
+            unidad_area = UNIDADES_INGLES['area']
+            unidad_modulo = UNIDADES_INGLES['modulo_rotura']
+            unidad_k = UNIDADES_INGLES['k']
+        
+        # Calcular juntas y refuerzo
+        L_junta = calcular_junta_L(D, modulo_rotura, sistema_unidades)
+        As_temp = calcular_As_temp(D, L_junta, acero_fy, sistema_unidades)
+        
+        # Calcular fatiga y erosión
+        reps = W18
+        porcentaje_fatiga = calcular_fatiga_corregida(reps, D, modulo_rotura, periodo)
+        porcentaje_erosion = calcular_erosion_corregida(reps, D, k_analisis, periodo)
+        
+        # Preparar resultados
+        resultados = {
+            'Espesor de losa calculado (D)': f"{D:.2f} {unidad_espesor}",
+            'Junta máxima (L)': f"{L_junta:.2f} {unidad_longitud}",
+            'Área de acero por temperatura (As)': f"{As_temp:.2f} {unidad_area}",
+            'Número de ejes equivalentes (W18)': f"{W18:,.0f}",
+            'Módulo de reacción (k)': f"{k_analisis} {unidad_k}",
+            'Resistencia a flexión (Sc)': f"{modulo_rotura} {unidad_modulo}",
+            'Módulo elasticidad (Ec)': f"{Ec_calc:.0f} {unidad_modulo}",
+            'Coef. transferencia (J)': f"{J}",
+            'Coef. drenaje (C)': f"{C}",
+            'Confiabilidad (R)': f"{0.95}",  # Valor fijo basado en ZR
+            'Porcentaje de fatiga': f"{porcentaje_fatiga:.2f}%",
+            'Porcentaje de erosión': f"{porcentaje_erosion:.2f}%",
+            'ZR (Factor confiabilidad)': f"{ZR}",
+            'S0 (Desviación estándar)': f"{S0}",
+            'ΔPSI (Pérdida servicio)': f"{delta_PSI}",
+            'unidades': sistema_unidades
+        }
+        
+        return resultados
+        
+    except Exception as e:
+        st.error(f"Error en calcular_pavimento_rigido_mejorado: {str(e)}")
+        return None
+
+def mostrar_resultados_pavimento_rigido_mejorado(resultados, datos_entrada):
+    """Muestra los resultados del cálculo de pavimento rígido"""
+    st.success('✅ Cálculos completados exitosamente!')
+    
+    # Métricas principales
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Espesor de losa (D)", resultados['Espesor de losa calculado (D)'], "Calculado AASHTO 93")
+    with col2:
+        st.metric("Fatiga (%)", resultados['Porcentaje de fatiga'], "Análisis PCA")
+    with col3:
+        st.metric("Erosión (%)", resultados['Porcentaje de erosión'], "Análisis PCA")
+    
+    # Resultados detallados
+    st.subheader('📊 Resultados Detallados')
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Parámetros de Diseño:**")
+        st.markdown(f"• {resultados['Espesor de losa calculado (D)']}")
+        st.markdown(f"• {resultados['Junta máxima (L)']}")
+        st.markdown(f"• {resultados['Área de acero por temperatura (As)']}")
+        st.markdown(f"• {resultados['Número de ejes equivalentes (W18)']}")
+        st.markdown(f"• {resultados['Módulo de reacción (k)']}")
+    
+    with col2:
+        st.markdown("**Análisis de Resistencia:**")
+        st.markdown(f"• {resultados['Resistencia a flexión (Sc)']}")
+        st.markdown(f"• {resultados['Módulo elasticidad (Ec)']}")
+        st.markdown(f"• {resultados['Coef. transferencia (J)']}")
+        st.markdown(f"• {resultados['Coef. drenaje (C)']}")
+        st.markdown(f"• {resultados['Confiabilidad (R)']}")
+    
+    # Análisis de sensibilidad (si matplotlib está disponible)
+    try:
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+        import numpy as np
+        
+        # Datos para el análisis de sensibilidad
+        W18 = datos_entrada['W18']
+        k_analisis = 10 * datos_entrada['cbr'] if datos_entrada['subrasante_tipo'] == "Correlación con CBR" else datos_entrada['k_val']
+        Sc = datos_entrada['modulo_rotura']
+        sistema_unidades = datos_entrada['sistema_unidades']
+        
+        # Rangos para análisis
+        k_range = np.linspace(30, 500, 50)
+        Sc_range = np.linspace(200, 800, 50)
+        W18_range = np.linspace(50000, 500000, 50)
+        
+        # Cálculos de sensibilidad
+        D_k = []
+        for kx in k_range:
+            result = calcular_espesor_losa_AASHTO93(W18, datos_entrada['ZR'], datos_entrada['S0'], datos_entrada['delta_PSI'], 
+                                                   Sc, datos_entrada['J'], kx, datos_entrada['C'])
+            D_k.append(result if result is not None else 8.0)
+        
+        D_Sc = []
+        for scx in Sc_range:
+            result = calcular_espesor_losa_AASHTO93(W18, datos_entrada['ZR'], datos_entrada['S0'], datos_entrada['delta_PSI'], 
+                                                   scx, datos_entrada['J'], k_analisis, datos_entrada['C'])
+            D_Sc.append(result if result is not None else 8.0)
+        
+        D_W18 = []
+        for w18x in W18_range:
+            result = calcular_espesor_losa_AASHTO93(w18x, datos_entrada['ZR'], datos_entrada['S0'], datos_entrada['delta_PSI'], 
+                                                   Sc, datos_entrada['J'], k_analisis, datos_entrada['C'])
+            D_W18.append(result if result is not None else 8.0)
+        
+        # Gráfico de sensibilidad
+        st.subheader('📈 Análisis de Sensibilidad')
+        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 5))
+        
+        # D vs k
+        ax1.plot(k_range, D_k, color='blue', linewidth=2)
+        ax1.axvline(x=k_analisis, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {k_analisis}')
+        ax1.set_title('Espesor vs Módulo de reacción (k)')
+        ax1.set_xlabel('k (pci)')
+        ax1.set_ylabel('D (pulg)')
+        ax1.grid(True, alpha=0.3)
+        ax1.legend()
+        
+        # D vs Sc
+        ax2.plot(Sc_range, D_Sc, color='green', linewidth=2)
+        ax2.axvline(x=Sc, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {Sc}')
+        ax2.set_title('Espesor vs Módulo de rotura (Sc)')
+        ax2.set_xlabel('Sc (psi)')
+        ax2.set_ylabel('D (pulg)')
+        ax2.grid(True, alpha=0.3)
+        ax2.legend()
+        
+        # D vs W18
+        ax3.plot(W18_range, D_W18, color='orange', linewidth=2)
+        ax3.axvline(x=W18, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {W18:,.0f}')
+        ax3.set_title('Espesor vs Tránsito (W18)')
+        ax3.set_xlabel('W18')
+        ax3.set_ylabel('D (pulg)')
+        ax3.grid(True, alpha=0.3)
+        ax3.legend()
+        
+        plt.tight_layout()
+        st.pyplot(fig)
+        
+    except ImportError:
+        st.warning("⚠️ Matplotlib no está disponible. No se pueden mostrar gráficos de sensibilidad.")
+    
+    # Recomendaciones
+    st.subheader('💡 Recomendaciones')
+    porcentaje_fatiga = float(resultados['Porcentaje de fatiga'].replace('%', ''))
+    porcentaje_erosion = float(resultados['Porcentaje de erosión'].replace('%', ''))
+    
+    if porcentaje_fatiga > 100:
+        st.warning("⚠️ **Fatiga crítica detectada.** Considere aumentar el espesor de losa o mejorar la resistencia del concreto.")
+    elif porcentaje_fatiga > 50:
+        st.info("ℹ️ **Fatiga moderada.** El diseño está en el límite aceptable.")
+    else:
+        st.success("✅ **Fatiga dentro de límites seguros.**")
+    
+    if porcentaje_erosion > 100:
+        st.warning("⚠️ **Erosión crítica detectada.** Considere mejorar la subrasante o aumentar el espesor de subbase.")
+    elif porcentaje_erosion > 50:
+        st.info("ℹ️ **Erosión moderada.** Verificar drenaje y calidad de subrasante.")
+    else:
+        st.success("✅ **Erosión dentro de límites seguros.**")
+
+def mostrar_interfaz_pavimento_rigido_mejorado():
+    """Muestra la interfaz para el diseño de pavimento rígido"""
+    st.header('🛣️ Pavimento Rígido')
+    st.info('📋 Complete todos los datos del proyecto y parámetros de diseño.')
+    
+    with st.form('form_rigido_mejorado'):
+        st.subheader('📊 Datos del Proyecto')
+        col1, col2 = st.columns(2)
+        with col1:
+            proyecto = st.text_input('Nombre del Proyecto', value='Pavimento Rígido - San Miguel', key='proyecto_rigido_mejorado')
+            descripcion = st.text_input('Descripción', value='Pavimento rígido para vía urbana', key='descripcion_rigido_mejorado')
+            periodo = st.number_input('Período de diseño (años)', 5, 50, 20, key='periodo_rigido_mejorado')
+        with col2:
+            sistema_unidades = st.radio('Sistema de unidades', ['SI (Internacional)', 'Inglés'], 
+                                      horizontal=True, key='sistema_rigido_mejorado')
+            factor_seg = st.selectbox('Factor de seguridad', [1.0, 1.1, 1.2, 1.3, 1.4], 
+                                    index=2, key='factor_seg_rigido_mejorado')
+            tipo_ejes = st.selectbox('Tipo de Ejes', ['Ejes Simples', 'Ejes Tándem'], 
+                                   key='tipo_ejes_rigido_mejorado')
+        
+        st.subheader('🏗️ Parámetros de Diseño')
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            if sistema_unidades == "SI (Internacional)":
+                espesor_losa = st.number_input('Espesor de losa (mm)', 250, 1000, 500, key='espesor_losa_rigido_mejorado')
+                modulo_rotura = st.number_input('Módulo de rotura (MPa)', 3.0, 7.0, 4.5, step=0.1, key='modulo_rotura_rigido_mejorado')
+            else:
+                espesor_losa = st.number_input('Espesor de losa (pulg)', 10, 40, 20, key='espesor_losa_rigido_mejorado')
+                modulo_rotura = st.number_input('Módulo de rotura (psi)', 400, 1000, 650, key='modulo_rotura_rigido_mejorado')
+            dovelas = st.radio('Dovelas', ['Sí', 'No'], horizontal=True, index=0, key='dovelas_rigido_mejorado')
+            bermas = st.radio('Bermas', ['Sí', 'No'], horizontal=True, index=1, key='bermas_rigido_mejorado')
+        
+        with col2:
+            subrasante_tipo = st.radio('Subrasante', ['Ingreso directo', 'Correlación con CBR'], 
+                                     index=1, key='subrasante_tipo_rigido_mejorado')
+            if subrasante_tipo == "Ingreso directo":
+                if sistema_unidades == "SI (Internacional)":
+                    k_val = st.number_input('K (MPa/m)', 10, 200, 50, key='k_val_rigido_mejorado')
+                else:
+                    k_val = st.number_input('K (pci)', 50, 500, 200, key='k_val_rigido_mejorado')
+            else:
+                cbr = st.number_input('CBR (%)', 1, 20, 3, key='cbr_rigido_mejorado')
+            
+            subbase = st.checkbox('Subbase', value=True, key='subbase_rigido_mejorado')
+            if subbase:
+                if sistema_unidades == "SI (Internacional)":
+                    espesor_subbase = st.number_input('Espesor subbase (mm)', 50, 500, 200, key='espesor_subbase_rigido_mejorado')
+                else:
+                    espesor_subbase = st.number_input('Espesor subbase (pulg)', 2, 20, 8, key='espesor_subbase_rigido_mejorado')
+                tipo_subbase = st.radio('Tipo de subbase', ['Sin tratar', 'Tratada con cemento'], 
+                                      horizontal=True, key='tipo_subbase_rigido_mejorado')
+        
+        with col3:
+            diam_barras = st.selectbox('Diámetro de barra', ["3/8\"", "1/2\"", "5/8\"", "3/4\""], 
+                                     key='diam_barras_rigido_mejorado')
+            if sistema_unidades == "SI (Internacional)":
+                acero_fy = st.number_input('Acero (fy) (MPa)', 200, 600, 280, key='acero_fy_rigido_mejorado')
+            else:
+                acero_fy = st.number_input('Acero (fy) (ksi)', 30, 90, 40, key='acero_fy_rigido_mejorado')
+            ancho_carril = st.number_input('Ancho de carril (m)', 2.5, 4.0, 3.05, step=0.01, 
+                                         key='ancho_carril_rigido_mejorado')
+        
+        st.subheader('📈 Parámetros AASHTO 93')
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            ZR = st.number_input('ZR (Factor confiabilidad)', -5.0, 0.0, -1.645, step=0.01, 
+                               key='ZR_rigido_mejorado')
+            S0 = st.number_input('S0 (Desviación estándar)', 0.3, 0.5, 0.35, step=0.01, 
+                               key='S0_rigido_mejorado')
+        with col2:
+            delta_PSI = st.number_input('ΔPSI (Pérdida de servicio)', 1.0, 3.0, 1.5, step=0.1, 
+                                      key='delta_PSI_rigido_mejorado')
+        with col3:
+            confiabilidad = 95 + (ZR + 1.645) * 10
+            st.info(f"Confiabilidad: {confiabilidad:.0f}%")
+        
+        st.subheader('🚗 Análisis de Tránsito')
+        unidad_carga = "kN" if sistema_unidades == "SI (Internacional)" else "kips"
+        st.caption(f'Carga ({unidad_carga}) y repeticiones')
+        
+        if sistema_unidades == "SI (Internacional)":
+            tabla_default = {
+                "Carga": [134, 125, 116, 107, 98, 89, 80, 71, 62],
+                "Repeticiones": [6310, 14690, 30140, 106900, 233500, 422500, 586900, 1837000, 0]
+            }
+        else:
+            tabla_default = {
+                "Carga": [30.1, 28.1, 26.1, 24.1, 22.1, 20.1, 18.1, 16.1, 14.1],
+                "Repeticiones": [6310, 14690, 30140, 106900, 233500, 422500, 586900, 1837000, 0]
+            }
+        tabla = st.data_editor(tabla_default, num_rows="dynamic", use_container_width=True, 
+                             key='tabla_rigido_mejorado')
+        
+        submitted = st.form_submit_button('🚀 CALCULAR PAVIMENTO RÍGIDO COMPLETO', 
+                                        use_container_width=True)
+    
+    if submitted:
+        with st.spinner('🔄 Calculando pavimento rígido...'):
+            # Preparar datos para el cálculo
+            datos_calculo = {
+                'sistema_unidades': sistema_unidades,
+                'W18': sum(tabla['Repeticiones']) if 'Repeticiones' in tabla else 100000,
+                'k_val': k_val if subrasante_tipo == "Ingreso directo" else None,
+                'cbr': cbr if subrasante_tipo == "Correlación con CBR" else None,
+                'subrasante_tipo': subrasante_tipo,
+                'modulo_rotura': modulo_rotura,
+                'ZR': ZR,
+                'S0': S0,
+                'delta_PSI': delta_PSI,
+                'J': 3.2,
+                'C': 1.0,
+                'Ec': 300000,
+                'periodo': periodo,
+                'espesor_losa': espesor_losa,
+                'acero_fy': acero_fy
+            }
+            
+            # Realizar cálculos
+            resultados = calcular_pavimento_rigido_mejorado(datos_calculo)
+            
+            if resultados:
+                mostrar_resultados_pavimento_rigido_mejorado(resultados, datos_calculo)
 
 # --- FUNCIONES DE CÁLCULO PARA LIDAR/DRONES ---
 def calcular_pavimento_rigido(datos_lidar):

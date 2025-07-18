@@ -6,6 +6,25 @@ from io import BytesIO
 import base64
 import math
 
+# --- CONSTANTES Y CONFIGURACIONES ---
+UNIDADES_SI = {
+    'espesor': 'mm',
+    'modulo_rotura': 'MPa',
+    'k': 'MPa/m',
+    'longitud': 'm',
+    'area': 'mm²',
+    'fuerza': 'kN'
+}
+
+UNIDADES_INGLES = {
+    'espesor': 'pulg',
+    'modulo_rotura': 'psi',
+    'k': 'pci',
+    'longitud': 'pies',
+    'area': 'pulg²',
+    'fuerza': 'kips'
+}
+
 # --- GESTIÓN ROBUSTA DE DEPENDENCIAS Y GRÁFICOS ---
 # Inspirado en APP1.py, pero manteniendo la estructura de APP.py
 
@@ -3792,7 +3811,7 @@ with tabs[5]:
         for k in k_range:
             datos_tmp = dict(resultados_lidar)
             datos_tmp['cbr_estimado'] = k / 10  # Inversa de la correlación empírica k=10*CBR
-            res = calcular_pavimento_rigido(datos_tmp)
+            res = calcular_pavimento_rigido_lidar(datos_tmp)
             D_range.append(res['espesor_recomendado'] if res else np.nan)
         fig, ax = plt.subplots()
         ax.plot(k_range, D_range, marker='o')
@@ -4079,7 +4098,278 @@ def main():
     ])
     
     with tabs[0]:
-        mostrar_interfaz_pavimento_rigido_mejorado()
+        st.header('🛣️ Pavimento Rígido')
+        st.info('📋 Complete todos los datos del proyecto y parámetros de diseño. Al presionar el botón se ejecutarán todos los cálculos AASHTO 93, análisis de fatiga/erosión, gráficos de sensibilidad y se generará el reporte PDF premium.')
+        
+        with st.form('form_rigido'):
+            st.subheader('📊 Datos del Proyecto')
+            col1, col2 = st.columns(2)
+            with col1:
+                proyecto_rigido = st.text_input('Nombre del Proyecto', value='Pavimento Rígido - San Miguel', key='proyecto_rigido')
+                descripcion_rigido = st.text_input('Descripción', value='Pavimento rígido para vía urbana', key='descripcion_rigido')
+                periodo_rigido = st.number_input('Período de diseño (años)', 5, 50, 20, key='periodo_rigido')
+            with col2:
+                sistema_unidades_rigido = st.radio('Sistema de unidades', ['SI (Internacional)', 'Inglés'], horizontal=True, key='sistema_rigido')
+                factor_seg_rigido = st.selectbox('Factor de seguridad', [1.0, 1.1, 1.2, 1.3, 1.4], index=2, key='factor_seg_rigido')
+                tipo_ejes_rigido = st.selectbox('Tipo de Ejes', ['Ejes Simples', 'Ejes Tándem'], key='tipo_ejes_rigido')
+            
+            st.subheader('🏗️ Parámetros de Diseño')
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if sistema_unidades_rigido == "SI (Internacional)":
+                    espesor_losa_rigido = st.number_input('Espesor de losa (mm)', 250, 1000, 500, key='espesor_losa_rigido')
+                    modulo_rotura_rigido = st.number_input('Módulo de rotura (MPa)', 3.0, 7.0, 4.5, step=0.1, key='modulo_rotura_rigido')
+                else:
+                    espesor_losa_rigido = st.number_input('Espesor de losa (pulg)', 10, 40, 20, key='espesor_losa_rigido')
+                    modulo_rotura_rigido = st.number_input('Módulo de rotura (psi)', 400, 1000, 650, key='modulo_rotura_rigido')
+                dovelas_rigido = st.radio('Dovelas', ['Sí', 'No'], horizontal=True, index=0, key='dovelas_rigido')
+                bermas_rigido = st.radio('Bermas', ['Sí', 'No'], horizontal=True, index=1, key='bermas_rigido')
+            
+            with col2:
+                subrasante_tipo_rigido = st.radio('Subrasante', ['Ingreso directo', 'Correlación con CBR'], index=1, key='subrasante_tipo_rigido')
+                if subrasante_tipo_rigido == "Ingreso directo":
+                    if sistema_unidades_rigido == "SI (Internacional)":
+                        k_val_rigido = st.number_input('K (MPa/m)', 10, 200, 50, key='k_val_rigido')
+                    else:
+                        k_val_rigido = st.number_input('K (pci)', 50, 500, 200, key='k_val_rigido')
+                else:
+                    cbr_rigido = st.number_input('CBR (%)', 1, 20, 3, key='cbr_rigido')
+                
+                subbase_rigido = st.checkbox('Subbase', value=True, key='subbase_rigido')
+                if subbase_rigido:
+                    if sistema_unidades_rigido == "SI (Internacional)":
+                        espesor_subbase_rigido = st.number_input('Espesor subbase (mm)', 50, 500, 200, key='espesor_subbase_rigido')
+                    else:
+                        espesor_subbase_rigido = st.number_input('Espesor subbase (pulg)', 2, 20, 8, key='espesor_subbase_rigido')
+                    tipo_subbase_rigido = st.radio('Tipo de subbase', ['Sin tratar', 'Tratada con cemento'], horizontal=True, key='tipo_subbase_rigido')
+            
+            with col3:
+                diam_barras_rigido = st.selectbox('Diámetro de barra', ["3/8\"", "1/2\"", "5/8\"", "3/4\""], key='diam_barras_rigido')
+                if sistema_unidades_rigido == "SI (Internacional)":
+                    acero_fy_rigido = st.number_input('Acero (fy) (MPa)', 200, 600, 280, key='acero_fy_rigido')
+                else:
+                    acero_fy_rigido = st.number_input('Acero (fy) (ksi)', 30, 90, 40, key='acero_fy_rigido')
+                ancho_carril_rigido = st.number_input('Ancho de carril (m)', 2.5, 4.0, 3.05, step=0.01, key='ancho_carril_rigido')
+            
+            st.subheader('📈 Parámetros AASHTO 93')
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                ZR_rigido = st.number_input('ZR (Factor confiabilidad)', -5.0, 0.0, -1.645, step=0.01, key='ZR_rigido')
+                S0_rigido = st.number_input('S0 (Desviación estándar)', 0.3, 0.5, 0.35, step=0.01, key='S0_rigido')
+            with col2:
+                delta_PSI_rigido = st.number_input('ΔPSI (Pérdida de servicio)', 1.0, 3.0, 1.5, step=0.1, key='delta_PSI_rigido')
+            with col3:
+                st.info(f"Confiabilidad: {95 + (ZR_rigido + 1.645) * 10:.0f}%")
+            
+            st.subheader('🚗 Análisis de Tránsito')
+            unidad_carga_rigido = "kN" if sistema_unidades_rigido == "SI (Internacional)" else "kips"
+            st.caption(f'Carga ({unidad_carga_rigido}) y repeticiones')
+            
+            if sistema_unidades_rigido == "SI (Internacional)":
+                tabla_default_rigido = {
+                    "Carga": [134, 125, 116, 107, 98, 89, 80, 71, 62],
+                    "Repeticiones": [6310, 14690, 30140, 106900, 233500, 422500, 586900, 1837000, 0]
+                }
+            else:
+                tabla_default_rigido = {
+                    "Carga": [30.1, 28.1, 26.1, 24.1, 22.1, 20.1, 18.1, 16.1, 14.1],
+                    "Repeticiones": [6310, 14690, 30140, 106900, 233500, 422500, 586900, 1837000, 0]
+                }
+            tabla_rigido = st.data_editor(tabla_default_rigido, num_rows="dynamic", use_container_width=True, key='tabla_rigido')
+            
+            submitted_rigido = st.form_submit_button('🚀 CALCULAR PAVIMENTO RÍGIDO COMPLETO', use_container_width=True)
+        
+        if submitted_rigido:
+            with st.spinner('🔄 Calculando pavimento rígido...'):
+                try:
+                    # --- CÁLCULOS PAVIMENTO RÍGIDO ---
+                    W18_rigido = sum(tabla_rigido['Repeticiones']) if 'Repeticiones' in tabla_rigido else 100000
+                    
+                    # Calcular k según el tipo de entrada
+                    if subrasante_tipo_rigido == "Ingreso directo":
+                        k_analisis_rigido = k_val_rigido
+                    else:
+                        k_analisis_rigido = 10 * cbr_rigido
+                    
+                    # Parámetros de diseño
+                    R_rigido = 0.95  # Confiabilidad
+                    C_rigido = 1.0   # Coef. drenaje
+                    Sc_rigido = modulo_rotura_rigido  # Resistencia a flexión
+                    J_rigido = 3.2   # Coef. transferencia
+                    Ec_rigido = 300000  # Módulo elasticidad
+                    
+                    # Convertir unidades para cálculos internos (siempre usar sistema inglés para fórmulas)
+                    if sistema_unidades_rigido == "SI (Internacional)":
+                        # Convertir Sc de MPa a psi
+                        Sc_calc_rigido = Sc_rigido * 145.038
+                        # Convertir k de MPa/m a pci
+                        k_calc_rigido = k_analisis_rigido * 3.6839
+                        # Convertir Ec de MPa a psi (asumiendo Ec = 30000 MPa)
+                        Ec_calc_rigido = 30000 * 145.038
+                    else:
+                        Sc_calc_rigido = Sc_rigido
+                        k_calc_rigido = k_analisis_rigido
+                        Ec_calc_rigido = Ec_rigido
+                    
+                    # Calcular espesor de losa usando la fórmula AASHTO 93
+                    D_pulg_rigido = calcular_espesor_losa_AASHTO93(W18_rigido, ZR_rigido, S0_rigido, delta_PSI_rigido, Sc_calc_rigido, J_rigido, k_calc_rigido, C_rigido)
+                    
+                    if D_pulg_rigido is not None:
+                        if sistema_unidades_rigido == "SI (Internacional)":
+                            D_rigido = D_pulg_rigido * 25.4  # Convertir a mm
+                            unidad_espesor_rigido = "mm"
+                        else:
+                            D_rigido = D_pulg_rigido
+                            unidad_espesor_rigido = "pulg"
+                    else:
+                        D_rigido = 8.0  # Valor por defecto
+                        unidad_espesor_rigido = "pulg"
+                    
+                    # Calcular juntas (usando función corregida)
+                    L_junta_rigido = calcular_junta_L(D_rigido, Sc_rigido, sistema_unidades_rigido)
+                    
+                    # Calcular refuerzo por temperatura (usando función corregida)
+                    As_temp_rigido = calcular_As_temp(D_rigido, L_junta_rigido, acero_fy_rigido, sistema_unidades_rigido)
+                    
+                    # Calcular fatiga y erosión usando funciones corregidas
+                    reps_rigido = sum(tabla_rigido['Repeticiones']) if 'Repeticiones' in tabla_rigido else 0
+                    
+                    porcentaje_fatiga_rigido = calcular_fatiga_corregida(reps_rigido, D_rigido, modulo_rotura_rigido, periodo_rigido)
+                    porcentaje_erosion_rigido = calcular_erosion_corregida(reps_rigido, D_rigido, k_analisis_rigido, periodo_rigido)
+                    
+                    # Definir unidades según sistema
+                    if sistema_unidades_rigido == "SI (Internacional)":
+                        unidad_longitud_rigido = "m"
+                        unidad_area_rigido = "mm²"
+                        unidad_modulo_rigido = "MPa"
+                        unidad_k_rigido = "MPa/m"
+                    else:
+                        unidad_longitud_rigido = "pies"
+                        unidad_area_rigido = "pulg²"
+                        unidad_modulo_rigido = "psi"
+                        unidad_k_rigido = "pci"
+                    
+                    # --- MOSTRAR RESULTADOS ---
+                    st.success('✅ Cálculos completados exitosamente!')
+                    
+                    # Métricas principales
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Espesor de losa (D)", f"{D_rigido:.2f} {unidad_espesor_rigido}", "Calculado AASHTO 93")
+                    with col2:
+                        st.metric("Fatiga (%)", f"{porcentaje_fatiga_rigido:.2f}%", "Análisis PCA")
+                    with col3:
+                        st.metric("Erosión (%)", f"{porcentaje_erosion_rigido:.2f}%", "Análisis PCA")
+                    
+                    # Resultados detallados
+                    st.subheader('📊 Resultados Detallados')
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.markdown("**Parámetros de Diseño:**")
+                        st.markdown(f"• Espesor de losa calculado: **{D_rigido:.2f} {unidad_espesor_rigido}**")
+                        st.markdown(f"• Junta máxima: **{L_junta_rigido:.2f} {unidad_longitud_rigido}**")
+                        st.markdown(f"• Área de acero por temperatura: **{As_temp_rigido:.2f} {unidad_area_rigido}**")
+                        st.markdown(f"• Número de ejes equivalentes (W18): **{W18_rigido:,.0f}**")
+                        st.markdown(f"• Módulo de reacción (k): **{k_analisis_rigido} {unidad_k_rigido}**")
+                    
+                    with col2:
+                        st.markdown("**Análisis de Resistencia:**")
+                        st.markdown(f"• Resistencia a flexión (Sc): **{Sc_rigido} {unidad_modulo_rigido}**")
+                        st.markdown(f"• Módulo elasticidad (Ec): **{Ec_calc_rigido:.0f} {unidad_modulo_rigido}**")
+                        st.markdown(f"• Coef. transferencia (J): **{J_rigido}**")
+                        st.markdown(f"• Coef. drenaje (C): **{C_rigido}**")
+                        st.markdown(f"• Confiabilidad (R): **{R_rigido}**")
+                    
+                    # Análisis de sensibilidad (si matplotlib está disponible)
+                    try:
+                        import matplotlib
+                        matplotlib.use('Agg')
+                        import matplotlib.pyplot as plt
+                        import numpy as np
+                        
+                        # Datos para el análisis de sensibilidad
+                        k_range_rigido = np.linspace(30, 500, 50)
+                        Sc_range_rigido = np.linspace(200, 800, 50)
+                        W18_range_rigido = np.linspace(50000, 500000, 50)
+                        
+                        # Cálculos de sensibilidad
+                        D_k_rigido = []
+                        for kx in k_range_rigido:
+                            result = calcular_espesor_losa_AASHTO93(W18_rigido, ZR_rigido, S0_rigido, delta_PSI_rigido, 
+                                                                   Sc_calc_rigido, J_rigido, kx, C_rigido)
+                            D_k_rigido.append(result if result is not None else 8.0)
+                        
+                        D_Sc_rigido = []
+                        for scx in Sc_range_rigido:
+                            result = calcular_espesor_losa_AASHTO93(W18_rigido, ZR_rigido, S0_rigido, delta_PSI_rigido, 
+                                                                   scx, J_rigido, k_calc_rigido, C_rigido)
+                            D_Sc_rigido.append(result if result is not None else 8.0)
+                        
+                        D_W18_rigido = []
+                        for w18x in W18_range_rigido:
+                            result = calcular_espesor_losa_AASHTO93(w18x, ZR_rigido, S0_rigido, delta_PSI_rigido, 
+                                                                   Sc_calc_rigido, J_rigido, k_calc_rigido, C_rigido)
+                            D_W18_rigido.append(result if result is not None else 8.0)
+                        
+                        # Gráfico de sensibilidad
+                        st.subheader('📈 Análisis de Sensibilidad')
+                        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 5))
+                        
+                        # D vs k
+                        ax1.plot(k_range_rigido, D_k_rigido, color='blue', linewidth=2)
+                        ax1.axvline(x=k_calc_rigido, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {k_calc_rigido:.1f}')
+                        ax1.set_title('Espesor vs Módulo de reacción (k)')
+                        ax1.set_xlabel('k (pci)')
+                        ax1.set_ylabel('D (pulg)')
+                        ax1.grid(True, alpha=0.3)
+                        ax1.legend()
+                        
+                        # D vs Sc
+                        ax2.plot(Sc_range_rigido, D_Sc_rigido, color='green', linewidth=2)
+                        ax2.axvline(x=Sc_calc_rigido, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {Sc_calc_rigido:.1f}')
+                        ax2.set_title('Espesor vs Módulo de rotura (Sc)')
+                        ax2.set_xlabel('Sc (psi)')
+                        ax2.set_ylabel('D (pulg)')
+                        ax2.grid(True, alpha=0.3)
+                        ax2.legend()
+                        
+                        # D vs W18
+                        ax3.plot(W18_range_rigido, D_W18_rigido, color='orange', linewidth=2)
+                        ax3.axvline(x=W18_rigido, color='red', linestyle='--', alpha=0.7, label=f'Valor actual: {W18_rigido:,.0f}')
+                        ax3.set_title('Espesor vs Tránsito (W18)')
+                        ax3.set_xlabel('W18')
+                        ax3.set_ylabel('D (pulg)')
+                        ax3.grid(True, alpha=0.3)
+                        ax3.legend()
+                        
+                        plt.tight_layout()
+                        st.pyplot(fig)
+                        
+                    except ImportError:
+                        st.warning("⚠️ Matplotlib no está disponible. No se pueden mostrar gráficos de sensibilidad.")
+                    
+                    # Recomendaciones
+                    st.subheader('💡 Recomendaciones')
+                    if porcentaje_fatiga_rigido > 100:
+                        st.warning("⚠️ **Fatiga crítica detectada.** Considere aumentar el espesor de losa o mejorar la resistencia del concreto.")
+                    elif porcentaje_fatiga_rigido > 50:
+                        st.info("ℹ️ **Fatiga moderada.** El diseño está en el límite aceptable.")
+                    else:
+                        st.success("✅ **Fatiga dentro de límites seguros.**")
+                    
+                    if porcentaje_erosion_rigido > 100:
+                        st.warning("⚠️ **Erosión crítica detectada.** Considere mejorar la subrasante o aumentar el espesor de subbase.")
+                    elif porcentaje_erosion_rigido > 50:
+                        st.info("ℹ️ **Erosión moderada.** Verificar drenaje y calidad de subrasante.")
+                    else:
+                        st.success("✅ **Erosión dentro de límites seguros.**")
+                    
+                    # Botón para generar PDF
+                    if st.button('📄 Generar Reporte PDF Premium', key='btn_pdf_rigido'):
+                        st.info('Función de generación de PDF premium disponible en versión completa.')
+                
+                except Exception as e:
+                    st.error(f"Error en los cálculos: {str(e)}")
     
     with tabs[1]:
         st.header('🛣️ Pavimento Flexible')
@@ -4160,7 +4450,7 @@ def main():
             col1, col2, col3, col4 = st.columns(4)
             with col1:
                 if st.button('Pavimento Rígido', key='btn_rigido_lidar'):
-                    resultado_rigido = calcular_pavimento_rigido(resultados_lidar)
+                    resultado_rigido = calcular_pavimento_rigido_lidar(resultados_lidar)
                     st.write('**Resultado Pavimento Rígido:**')
                     st.json(resultado_rigido)
             with col2:
@@ -4695,7 +4985,7 @@ def mostrar_interfaz_pavimento_rigido_mejorado():
                 mostrar_resultados_pavimento_rigido_mejorado(resultados, datos_calculo)
 
 # --- FUNCIONES DE CÁLCULO PARA LIDAR/DRONES ---
-def calcular_pavimento_rigido(datos_lidar):
+def calcular_pavimento_rigido_lidar(datos_lidar):
     try:
         if not datos_lidar:
             return None

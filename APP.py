@@ -1199,7 +1199,7 @@ def calcular_espesor_losa_rigido(W18, k, R, C, Sc, J, Ec, sistema_unidades):
         
         # Convertir unidades según el sistema seleccionado
         if D is not None:
-            if sistema_unidades == "Sistema Internacional (SI)":
+        if sistema_unidades == "Sistema Internacional (SI)":
                 # Convertir de pulgadas a mm
                 D = D * 25.4
             # Si es sistema inglés, mantener en pulgadas

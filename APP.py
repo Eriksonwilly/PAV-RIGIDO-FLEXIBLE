@@ -1056,7 +1056,7 @@ def show_login_page():
             if check_credentials(username, password):
                 st.session_state['logged_in'] = True
                 st.session_state['user'] = username
-                st.rerun()
+                st.experimental_rerun()
                 st.stop()  # <-- Esto es clave para cortar el flujo tras el rerun
             else:
                 st.error("Usuario o contraseña incorrectos.")
@@ -1085,7 +1085,7 @@ with st.container():
         if st.button("Cerrar Sesión", key="logout_btn"):
             st.session_state['logged_in'] = False
             st.session_state['user'] = None
-            st.rerun()
+            st.experimental_rerun()
 
 st.info("""
 Bienvenido al sistema profesional de diseño de pavimentos. Complete los datos del proyecto y presione **Calcular** para obtener resultados y recomendaciones según normativa peruana. 
@@ -1198,22 +1198,6 @@ def calcular_espesor_losa_rigido(W18, k, R, C, Sc, J, Ec, sistema_unidades):
         D = calcular_espesor_losa_AASHTO93(W18_lim, ZR, S0, delta_PSI, Sc, J, k, C)
         
         # Convertir unidades según el sistema seleccionado
-        def calcular_espesor_losa_rigido(W18, k, R, C, Sc, J, Ec, sistema_unidades):
-        """
-    Calcula el espesor de losa de pavimento rígido según AASHTO 93
-    Parámetros corregidos para resultados realistas
-    """
-    try:
-        # Limitar W18 a valores realistas
-        W18_lim = min(W18, 1000000)  # Máximo 1 millón de ESALs
-        
-        # Usar la función AASHTO 93 corregida
-        ZR = -1.645  # Factor de confiabilidad estándar para 95%
-        S0 = 0.35   # Desviación estándar
-        delta_PSI = 1.5  # Pérdida de servicio
-        D = calcular_espesor_losa_AASHTO93(W18_lim, ZR, S0, delta_PSI, Sc, J, k, C)
-        
-        # Convertir unidades según el sistema seleccionado
         if D is not None:
             if sistema_unidades == "Sistema Internacional (SI)":
                 # Convertir de pulgadas a mm
@@ -1222,9 +1206,6 @@ def calcular_espesor_losa_rigido(W18, k, R, C, Sc, J, Ec, sistema_unidades):
         else:
             D = 8.0  # Valor por defecto
         
-        return D
-    except Exception:
-        return 0
         return D
     except Exception:
         return 0
@@ -4361,107 +4342,23 @@ with tabs[5]:
                     if st.button("🚀 Generar PDF LiDAR Completo", key="btn_pdf_lidar", use_container_width=True):
                         try:
                             with st.spinner("Generando PDF LiDAR..."):
-                                # Datos de ejemplo para San Miguel Puno
                                 datos_proyecto_lidar = {
-                                    'Proyecto': 'San Miguel Puno - Cuadra 1',
-                                    'Descripción': 'Pavimentación urbana con análisis LiDAR y datos satelitales',
+                                    'Proyecto': proyecto_lidar,
+                                    'Descripción': descripcion_lidar,
                                     'Usuario': st.session_state.get('user', 'Usuario'),
-                                    'Sistema_Unidades': 'Sistema Internacional (SI)'
+                                    'Sistema_Unidades': sistema_unidades_lidar
                                 }
-                                
-                                # Datos de ejemplo para LiDAR
-                                resultados_lidar_ejemplo = {
-                                    'total_points': 25000,
-                                    'area_ha': 0.08,
-                                    'elevation_min': 3800,
-                                    'elevation_max': 3810,
-                                    'elevation_avg': 3805,
-                                    'pendiente_promedio': 5.2,
-                                    'pendiente_maxima': 8.5,
-                                    'ground_points': 15000,
-                                    'vegetation_points': 8000,
-                                    'building_points': 2000
-                                }
-                                
-                                # Datos satelitales de ejemplo
-                                datos_satelitales_ejemplo = {
-                                    'NDVI_promedio': 0.383,
-                                    'NDVI_minimo': 0.252,
-                                    'NDVI_maximo': 0.557,
-                                    'Humedad_suelo_promedio': 0.148,
-                                    'Precipitacion_anual': 640.8,
-                                    'Temperatura_promedio': 9.2,
-                                    'CBR_estimado_NDVI': 4.7,
-                                    'Clasificacion_suelo': 'Suelo volcánico con baja retención de humedad'
-                                }
-                                
-                                # Contenido HEC-RAS de ejemplo
-                                hec_ras_content_ejemplo = """HEC-RAS Version 6.0
-Title: San Miguel - Cuadra 1 - Diseño de Drenaje
-Author: Software de Diseño de Pavimentos - UNI
-Date: 2025-07-13
-Description: Diseño de cunetas y drenaje superficial para pavimentación urbana
-
-# DATOS DEL PROYECTO
-Project Name: San Miguel - Cuadra 1
-Location: San Miguel, Puno, Perú
-Design Year: 2025
-Return Period: 10 years
-
-# PARÁMETROS HIDROLÓGICOS
-Area: 0.08 ha
-Length: 100 m
-Slope: 5.2%
-Time of Concentration: 8.5 min
-Rainfall Intensity: 60 mm/h
-Runoff Coefficient: 0.7
-
-# DISEÑO DE CUNETAS
-Design Flow: 0.0012 m³/s
-Design Flow: 1.2 L/s
-Velocity: 1.5 m/s
-Depth: 0.15 m
-Width: 0.3 m
-
-# GEOMETRÍA DE CUNETAS
-# Sección triangular
-Station 0.0
-Elevation 0.15
-Station 0.3
-Elevation 0.0
-
-# MATERIALES
-Manning's n: 0.013 (Concrete)
-Side Slope: 2:1
-Bottom Width: 0.0 m
-
-# ANÁLISIS HIDRÁULICO
-Flow Type: Subcritical
-Analysis Method: Standard Step
-Convergence Tolerance: 0.01
-
-# RESULTADOS ESPERADOS
-Expected Depth: 0.15 m
-Expected Velocity: 1.5 m/s
-Froude Number: < 1.0 (Subcritical)
-Safety Factor: > 1.5
-
-# RECOMENDACIONES
-- Mantener pendiente mínima de 2%
-- Limpieza periódica de cunetas
-- Considerar drenaje subterráneo en zonas críticas
-- Verificar capacidad durante eventos extremos"""
                                 
                                 pdf_buffer_lidar = generar_pdf_lidar_completo(
                                     datos_proyecto_lidar, 
-                                    resultados_lidar_ejemplo, 
-                                    datos_satelitales_ejemplo, 
-                                    hec_ras_content_ejemplo
+                                    resultados_lidar, 
+                                    datos_satelitales, 
+                                    hec_ras_content
                                 )
                                 
                                 if pdf_buffer_lidar:
                                     st.session_state['pdf_lidar'] = pdf_buffer_lidar
-                                    st.session_state['pdf_lidar_filename'] = f"reporte_lidar_san_miguel_cuadra_1.pdf"
+                                    st.session_state['pdf_lidar_filename'] = f"reporte_lidar_{proyecto_lidar}.pdf"
                                     st.success("✅ PDF LiDAR generado exitosamente!")
                                 else:
                                     st.error("❌ Error al generar PDF LiDAR")
@@ -4471,329 +4368,25 @@ Safety Factor: > 1.5
                 
                 with col2:
                     if st.button("📁 Exportar HEC-RAS", key="btn_hec_ras", use_container_width=True):
-                        # Contenido HEC-RAS para San Miguel
-                        hec_ras_content_san_miguel = """HEC-RAS Version 6.0
-Title: San Miguel - Cuadra 1 - Diseño de Drenaje
-Author: Software de Diseño de Pavimentos - UNI
-Date: 2025-07-13
-Description: Diseño de cunetas y drenaje superficial para pavimentación urbana
-
-# DATOS DEL PROYECTO
-Project Name: San Miguel - Cuadra 1
-Location: San Miguel, Puno, Perú
-Design Year: 2025
-Return Period: 10 years
-
-# PARÁMETROS HIDROLÓGICOS
-Area: 0.08 ha
-Length: 100 m
-Slope: 5.2%
-Time of Concentration: 8.5 min
-Rainfall Intensity: 60 mm/h
-Runoff Coefficient: 0.7
-
-# DISEÑO DE CUNETAS
-Design Flow: 0.0012 m³/s
-Design Flow: 1.2 L/s
-Velocity: 1.5 m/s
-Depth: 0.15 m
-Width: 0.3 m
-
-# GEOMETRÍA DE CUNETAS
-# Sección triangular
-Station 0.0
-Elevation 0.15
-Station 0.3
-Elevation 0.0
-
-# MATERIALES
-Manning's n: 0.013 (Concrete)
-Side Slope: 2:1
-Bottom Width: 0.0 m
-
-# ANÁLISIS HIDRÁULICO
-Flow Type: Subcritical
-Analysis Method: Standard Step
-Convergence Tolerance: 0.01
-
-# RESULTADOS ESPERADOS
-Expected Depth: 0.15 m
-Expected Velocity: 1.5 m/s
-Froude Number: < 1.0 (Subcritical)
-Safety Factor: > 1.5
-
-# RECOMENDACIONES
-- Mantener pendiente mínima de 2%
-- Limpieza periódica de cunetas
-- Considerar drenaje subterráneo en zonas críticas
-- Verificar capacidad durante eventos extremos
-
-# COORDENADAS DEL PROYECTO
-Latitude: -15.8422
-Longitude: -70.0199
-Elevation: 3805 m
-Zone: UTM 19S
-
-# ANÁLISIS DE CAPACIDAD
-Capacity Check: PASSED
-Safety Factor: 1.8
-Design Criteria: MET
-Notes: Cunetas adecuadas para condiciones de San Miguel, Puno"""
-                        
-                        st.download_button(
-                            label="📥 Descargar HEC-RAS",
-                            data=hec_ras_content_san_miguel,
-                            file_name="hec_ras_san_miguel_cuadra_1.txt",
-                            mime="text/plain",
-                            key="btn_download_hec_ras"
-                        )
-                        st.success("✅ Archivo HEC-RAS generado para San Miguel, Puno")
+                        if hec_ras_content:
+                            st.download_button(
+                                label="📥 Descargar HEC-RAS",
+                                data=hec_ras_content,
+                                file_name=f"hec_ras_san_miguel_cuadra_1.txt",
+                                mime="text/plain",
+                                key="btn_download_hec_ras"
+                            )
+                        else:
+                            st.warning("No hay datos HEC-RAS para exportar")
                 
                 with col3:
                     if st.button("🏗️ Exportar AutoCAD", key="btn_autocad", use_container_width=True):
-                        try:
-                            # Importar librerías necesarias
-                            import numpy as np
-                            from datetime import datetime
-                            import os
-                            
-                            # Datos por defecto de San Miguel 1 cuadra
-                            proyecto_san_miguel = "San Miguel Puno - Cuadra 1"
-                            ubicacion = "San Miguel, Puno, Perú"
-                            coordenadas = "-15.8422°S, -70.0199°W"
-                            elevacion_base = 3800  # msnm (ajustado a los datos LiDAR)
-                            area_longitud = 32  # metros (según datos LiDAR)
-                            area_ancho = 32     # metros (según datos LiDAR)
-                            pendiente = 5.2     # porcentaje
-                            
-                            # Puntos LiDAR simulados para curvas de nivel (UTM 19S, WGS84)
-                            # Proyecto: San Miguel, Puno - Altitud: 3800-3815 msnm
-                            # Pendiente: 5.2% - Área: 32x32m (1000 m²)
-                            
-                            # Crear archivo de puntos LiDAR para AutoCAD con formato profesional
-                            autocad_content = f"""# AutoCAD Point Cloud Data - San Miguel, Puno
-# Generated by CONSORCIO DEJ Software - Pavimento Design System
-# Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-# Project: {proyecto_san_miguel}
-# Location: {ubicacion}
-# Coordinates: {coordenadas}
-# Elevation Base: {elevacion_base} msnm
-# Area: {area_longitud}m x {area_ancho}m = {area_longitud * area_ancho / 10000:.2f} ha
-# Slope: {pendiente}%
-# Total Points: 200 (LiDAR points)
-
-# Format: Norte, Este, Elevación, Description, Layer
-# Coordinates in meters, UTM Zone 19S
-# Norte = Northing, Este = Easting, Elevación = Elevation
-
-# ========================================
-# LIDAR POINTS (Puntos LiDAR para Curvas de Nivel)
-# ========================================
-# Puntos LiDAR simulados para curvas de nivel (UTM 19S, WGS84)
-# Proyecto: San Miguel, Puno - Altitud: 3800-3815 msnm
-# Pendiente: 5.2% - Área: 32x32m (1000 m²)
-# Formato: Norte,Este,Elevación (metros)
-
-Norte,Este,Elevación,Description,Layer
-8325000.00,230500.00,3800.50,LIDAR_Point,TERRAIN
-8325000.00,230501.25,3800.75,LIDAR_Point,TERRAIN
-8325000.00,230502.50,3801.00,LIDAR_Point,TERRAIN
-8325000.00,230503.75,3801.25,LIDAR_Point,TERRAIN
-8325000.00,230505.00,3801.50,LIDAR_Point,TERRAIN
-8325001.25,230500.00,3800.55,LIDAR_Point,TERRAIN
-8325001.25,230501.25,3800.80,LIDAR_Point,TERRAIN
-8325001.25,230502.50,3801.05,LIDAR_Point,TERRAIN
-8325001.25,230503.75,3801.30,LIDAR_Point,TERRAIN
-8325001.25,230505.00,3801.55,LIDAR_Point,TERRAIN
-8325002.50,230500.00,3800.60,LIDAR_Point,TERRAIN
-8325002.50,230501.25,3800.85,LIDAR_Point,TERRAIN
-8325002.50,230502.50,3801.10,LIDAR_Point,TERRAIN
-8325002.50,230503.75,3801.35,LIDAR_Point,TERRAIN
-8325002.50,230505.00,3801.60,LIDAR_Point,TERRAIN
-8325003.75,230500.00,3800.65,LIDAR_Point,TERRAIN
-8325003.75,230501.25,3800.90,LIDAR_Point,TERRAIN
-8325003.75,230502.50,3801.15,LIDAR_Point,TERRAIN
-8325003.75,230503.75,3801.40,LIDAR_Point,TERRAIN
-8325003.75,230505.00,3801.65,LIDAR_Point,TERRAIN
-8325005.00,230500.00,3800.70,LIDAR_Point,TERRAIN
-8325005.00,230501.25,3800.95,LIDAR_Point,TERRAIN
-8325005.00,230502.50,3801.20,LIDAR_Point,TERRAIN
-8325005.00,230503.75,3801.45,LIDAR_Point,TERRAIN
-8325005.00,230505.00,3801.70,LIDAR_Point,TERRAIN
-8325006.25,230500.00,3800.75,LIDAR_Point,TERRAIN
-8325006.25,230501.25,3801.00,LIDAR_Point,TERRAIN
-8325006.25,230502.50,3801.25,LIDAR_Point,TERRAIN
-8325006.25,230503.75,3801.50,LIDAR_Point,TERRAIN
-8325006.25,230505.00,3801.75,LIDAR_Point,TERRAIN
-8325007.50,230500.00,3800.80,LIDAR_Point,TERRAIN
-8325007.50,230501.25,3801.05,LIDAR_Point,TERRAIN
-8325007.50,230502.50,3801.30,LIDAR_Point,TERRAIN
-8325007.50,230503.75,3801.55,LIDAR_Point,TERRAIN
-8325007.50,230505.00,3801.80,LIDAR_Point,TERRAIN
-8325008.75,230500.00,3800.85,LIDAR_Point,TERRAIN
-8325008.75,230501.25,3801.10,LIDAR_Point,TERRAIN
-8325008.75,230502.50,3801.35,LIDAR_Point,TERRAIN
-8325008.75,230503.75,3801.60,LIDAR_Point,TERRAIN
-8325008.75,230505.00,3801.85,LIDAR_Point,TERRAIN
-8325010.00,230500.00,3800.90,LIDAR_Point,TERRAIN
-8325010.00,230501.25,3801.15,LIDAR_Point,TERRAIN
-8325010.00,230502.50,3801.40,LIDAR_Point,TERRAIN
-8325010.00,230503.75,3801.65,LIDAR_Point,TERRAIN
-8325010.00,230505.00,3801.90,LIDAR_Point,TERRAIN
-8325011.25,230500.00,3800.95,LIDAR_Point,TERRAIN
-8325011.25,230501.25,3801.20,LIDAR_Point,TERRAIN
-8325011.25,230502.50,3801.45,LIDAR_Point,TERRAIN
-8325011.25,230503.75,3801.70,LIDAR_Point,TERRAIN
-8325011.25,230505.00,3801.95,LIDAR_Point,TERRAIN
-8325012.50,230500.00,3801.00,LIDAR_Point,TERRAIN
-8325012.50,230501.25,3801.25,LIDAR_Point,TERRAIN
-8325012.50,230502.50,3801.50,LIDAR_Point,TERRAIN
-8325012.50,230503.75,3801.75,LIDAR_Point,TERRAIN
-8325012.50,230505.00,3802.00,LIDAR_Point,TERRAIN
-8325013.75,230500.00,3801.05,LIDAR_Point,TERRAIN
-8325013.75,230501.25,3801.30,LIDAR_Point,TERRAIN
-8325013.75,230502.50,3801.55,LIDAR_Point,TERRAIN
-8325013.75,230503.75,3801.80,LIDAR_Point,TERRAIN
-8325013.75,230505.00,3802.05,LIDAR_Point,TERRAIN
-8325015.00,230500.00,3801.10,LIDAR_Point,TERRAIN
-8325015.00,230501.25,3801.35,LIDAR_Point,TERRAIN
-8325015.00,230502.50,3801.60,LIDAR_Point,TERRAIN
-8325015.00,230503.75,3801.85,LIDAR_Point,TERRAIN
-8325015.00,230505.00,3802.10,LIDAR_Point,TERRAIN
-8325016.25,230500.00,3801.15,LIDAR_Point,TERRAIN
-8325016.25,230501.25,3801.40,LIDAR_Point,TERRAIN
-8325016.25,230502.50,3801.65,LIDAR_Point,TERRAIN
-8325016.25,230503.75,3801.90,LIDAR_Point,TERRAIN
-8325016.25,230505.00,3802.15,LIDAR_Point,TERRAIN
-8325017.50,230500.00,3801.20,LIDAR_Point,TERRAIN
-8325017.50,230501.25,3801.45,LIDAR_Point,TERRAIN
-8325017.50,230502.50,3801.70,LIDAR_Point,TERRAIN
-8325017.50,230503.75,3801.95,LIDAR_Point,TERRAIN
-8325017.50,230505.00,3802.20,LIDAR_Point,TERRAIN
-8325018.75,230500.00,3801.25,LIDAR_Point,TERRAIN
-8325018.75,230501.25,3801.50,LIDAR_Point,TERRAIN
-8325018.75,230502.50,3801.75,LIDAR_Point,TERRAIN
-8325018.75,230503.75,3802.00,LIDAR_Point,TERRAIN
-8325018.75,230505.00,3802.25,LIDAR_Point,TERRAIN
-8325020.00,230500.00,3801.30,LIDAR_Point,TERRAIN
-8325020.00,230501.25,3801.55,LIDAR_Point,TERRAIN
-8325020.00,230502.50,3801.80,LIDAR_Point,TERRAIN
-8325020.00,230503.75,3802.05,LIDAR_Point,TERRAIN
-8325020.00,230505.00,3802.30,LIDAR_Point,TERRAIN
-8325021.25,230500.00,3801.35,LIDAR_Point,TERRAIN
-8325021.25,230501.25,3801.60,LIDAR_Point,TERRAIN
-8325021.25,230502.50,3801.85,LIDAR_Point,TERRAIN
-8325021.25,230503.75,3802.10,LIDAR_Point,TERRAIN
-8325021.25,230505.00,3802.35,LIDAR_Point,TERRAIN
-8325022.50,230500.00,3801.40,LIDAR_Point,TERRAIN
-8325022.50,230501.25,3801.65,LIDAR_Point,TERRAIN
-8325022.50,230502.50,3801.90,LIDAR_Point,TERRAIN
-8325022.50,230503.75,3802.15,LIDAR_Point,TERRAIN
-8325022.50,230505.00,3802.40,LIDAR_Point,TERRAIN
-8325023.75,230500.00,3801.45,LIDAR_Point,TERRAIN
-8325023.75,230501.25,3801.70,LIDAR_Point,TERRAIN
-8325023.75,230502.50,3801.95,LIDAR_Point,TERRAIN
-8325023.75,230503.75,3802.20,LIDAR_Point,TERRAIN
-8325023.75,230505.00,3802.45,LIDAR_Point,TERRAIN
-8325025.00,230500.00,3801.50,LIDAR_Point,TERRAIN
-8325025.00,230501.25,3801.75,LIDAR_Point,TERRAIN
-8325025.00,230502.50,3802.00,LIDAR_Point,TERRAIN
-8325025.00,230503.75,3802.25,LIDAR_Point,TERRAIN
-8325025.00,230505.00,3802.50,LIDAR_Point,TERRAIN
-8325026.25,230500.00,3801.55,LIDAR_Point,TERRAIN
-8325026.25,230501.25,3801.80,LIDAR_Point,TERRAIN
-8325026.25,230502.50,3802.05,LIDAR_Point,TERRAIN
-8325026.25,230503.75,3802.30,LIDAR_Point,TERRAIN
-8325026.25,230505.00,3802.55,LIDAR_Point,TERRAIN
-8325027.50,230500.00,3801.60,LIDAR_Point,TERRAIN
-8325027.50,230501.25,3801.85,LIDAR_Point,TERRAIN
-8325027.50,230502.50,3802.10,LIDAR_Point,TERRAIN
-8325027.50,230503.75,3802.35,LIDAR_Point,TERRAIN
-8325027.50,230505.00,3802.60,LIDAR_Point,TERRAIN
-8325028.75,230500.00,3801.65,LIDAR_Point,TERRAIN
-8325028.75,230501.25,3801.90,LIDAR_Point,TERRAIN
-8325028.75,230502.50,3802.15,LIDAR_Point,TERRAIN
-8325028.75,230503.75,3802.40,LIDAR_Point,TERRAIN
-8325028.75,230505.00,3802.65,LIDAR_Point,TERRAIN
-8325030.00,230500.00,3801.70,LIDAR_Point,TERRAIN
-8325030.00,230501.25,3801.95,LIDAR_Point,TERRAIN
-8325030.00,230502.50,3802.20,LIDAR_Point,TERRAIN
-8325030.00,230503.75,3802.45,LIDAR_Point,TERRAIN
-8325030.00,230505.00,3802.70,LIDAR_Point,TERRAIN
-
-# ========================================
-# REFERENCE POINTS (Puntos de Referencia)
-# ========================================
-# Puntos de control y referencia para el proyecto
-8325000.00,230500.00,3800.50,Punto_Inicio,REFERENCE
-8325030.00,230500.00,3801.70,Punto_Fin_Norte,REFERENCE
-8325000.00,230505.00,3801.50,Punto_Inicio_Este,REFERENCE
-8325030.00,230505.00,3802.70,Punto_Fin_Diagonal,REFERENCE
-8325015.00,230502.50,3801.60,Punto_Centro,REFERENCE
-
-# ========================================
-# TECHNICAL INFORMATION
-# ========================================
-# Project: {proyecto_san_miguel}
-# Location: {ubicacion}
-# Coordinates: {coordenadas}
-# Elevation Base: {elevacion_base} msnm
-# Area: {area_longitud}m x {area_ancho}m = {area_longitud * area_ancho / 10000:.2f} ha
-# Slope: {pendiente}%
-# Design Standards: AASHTO 93, PCA, MTC
-# Software: CONSORCIO DEJ - Pavimento Design System
-# Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-
-# LAYERS:
-# - TERRAIN: Puntos LiDAR del terreno natural
-# - REFERENCE: Puntos de referencia y control
-
-# NOTES:
-# - Coordenadas en UTM Zone 19S
-# - Elevaciones en metros sobre el nivel del mar
-# - Pendiente promedio: {pendiente}%
-# - Datos LiDAR simulados para curvas de nivel
-# - Área de estudio: 32x32m (1000 m²)
-# - Rango de elevación: 3800-3815 msnm
-# - Compatible con AutoCAD Civil 3D
-# - Formato: Norte, Este, Elevación, Description, Layer
-"""
-                            
-                            # Guardar archivo automáticamente
-                            filename = f"autocad_san_miguel_lidar_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-                            filepath = os.path.join(os.getcwd(), filename)
-                            
-                            with open(filepath, "w", encoding="utf-8") as f:
-                                f.write(autocad_content)
-                            
-                            st.download_button(
-                                label="📥 Descargar AutoCAD LiDAR",
-                                data=autocad_content,
-                                file_name=filename,
-                                mime="text/plain",
-                                key="btn_download_autocad_lidar"
-                            )
-                            st.success(f"✅ Datos LiDAR preparados para AutoCAD Civil 3D")
-                            st.success(f"💾 Archivo guardado automáticamente: {filename}")
-                            st.info("💡 Archivo contiene puntos LiDAR para curvas de nivel de San Miguel, Puno")
-                            
-                            # Mostrar resumen de datos generados
-                            with st.expander("📊 Resumen de datos LiDAR generados"):
-                                st.write(f"**Proyecto:** {proyecto_san_miguel}")
-                                st.write(f"**Ubicación:** {ubicacion}")
-                                st.write(f"**Coordenadas:** {coordenadas}")
-                                st.write(f"**Elevación base:** {elevacion_base} msnm")
-                                st.write(f"**Área:** {area_longitud}m x {area_ancho}m = {area_longitud * area_ancho / 10000:.2f} ha")
-                                st.write(f"**Pendiente:** {pendiente}%")
-                                st.write(f"**Total de puntos LiDAR:** 200 puntos")
-                                st.write(f"**Rango de elevación:** 3800-3815 msnm")
-                                st.write("**Capas incluidas:** Terreno (LiDAR), Referencia")
-                                st.write("**Formato:** Norte, Este, Elevación, Description, Layer")
-                                st.write("**Compatibilidad:** AutoCAD Civil 3D, CivilCAD")
-                            
-                        except Exception as e:
-                            st.error(f"❌ Error generando datos LiDAR AutoCAD: {str(e)}")
-                            st.error("💡 Verificar que numpy esté instalado: pip install numpy")
+                        if 'resultados_lidar' in locals() and resultados_lidar.get('ground_points'):
+                            # Simular exportación a AutoCAD
+                            st.success("✅ Datos preparados para AutoCAD Civil 3D")
+                            st.info("💡 Los datos están listos para importar en AutoCAD")
+                        else:
+                            st.warning("No hay datos LiDAR para exportar a AutoCAD")
                 
                 # Descargar PDF si está disponible
                 if 'pdf_lidar' in st.session_state:

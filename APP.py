@@ -3787,12 +3787,17 @@ with tabs[5]:
         import matplotlib.pyplot as plt
         import numpy as np
         k_range = np.linspace(10, 100, 30)
-        D_range = [calcular_espesor_losa_rigido(3.2e6, -1.645, 0.35, 1.5, 4.5, 3.2, k, 1.0, 30000) for k in k_range]
+        D_range = []
+        for k in k_range:
+            datos_tmp = dict(resultados_lidar)
+            datos_tmp['cbr_estimado'] = k / 10  # Inversa de la correlación empírica k=10*CBR
+            res = calcular_pavimento_rigido(datos_tmp)
+            D_range.append(res['espesor_recomendado'] if res else np.nan)
         fig, ax = plt.subplots()
         ax.plot(k_range, D_range, marker='o')
         ax.set_xlabel('Módulo de reacción k (MPa/m)')
-        ax.set_ylabel('Espesor de losa D (mm)')
-        ax.set_title('Sensibilidad de D respecto a k (San Miguel, Puno)')
+        ax.set_ylabel('Espesor recomendado (pulg)')
+        ax.set_title('Sensibilidad de espesor respecto a k (San Miguel, Puno)')
         st.pyplot(fig)
     else:
         st.info('Matplotlib no está disponible para gráficos.')
